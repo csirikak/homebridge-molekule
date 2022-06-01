@@ -6,7 +6,7 @@ exports.PLUGIN_NAME = exports.PLATFORM_NAME = void 0;
  */
 exports.PLATFORM_NAME = 'Molekule';
 /**
- * This must match the name of your plugin as defined the package.json
- */
+  * This must match the name of your plugin as defined the package.json
+  */
 exports.PLUGIN_NAME = 'homebridge-molekule';
 //# sourceMappingURL=settings.js.map

@@ -10,7 +10,7 @@ const cognito_1 = require("./cognito");
  * parse the user config and discover/register accessories with Homebridge.
  */
 class MolekuleHomebridgePlatform {
-    constructor(log, config, api, caller = new cognito_1.httpAJAX(log, config)) {
+    constructor(log, config, api, caller = new cognito_1.HttpAJAX(log, config)) {
         this.log = log;
         this.config = config;
         this.api = api;
@@ -45,18 +45,20 @@ class MolekuleHomebridgePlatform {
      * must not be registered again to prevent "duplicate UUID" errors.
      */
     async discoverDevices() {
-        this.log.debug("Discover Devices Called");
+        this.log.debug('Discover Devices Called');
         // EXAMPLE ONLY
         // A real plugin you would discover accessories from the local network, cloud services
         // or a user-defined array in the platform config.
         let devices = await this.caller.httpCall('GET', '', null, 1).catch(e => { return; });
-        //this.log.debug(await this.caller.httpCall('GET', '', null, 1).catch(e => { return }));
+        // this.log.debug(await this.caller.httpCall('GET', '', null, 1).catch(e => { return }));
         // loop over the discovered devices and register each one if it has not already been registered
-        devices.json().content.forEach((device) => {
+        if (devices === undefined)
+            return; //prevent crashes
+        devices.content.forEach((device) => {
             // generate a unique id for the accessory this should be generated from
             // something globally unique, but constant, for example, the device serial
             // number or MAC address
-            this.log.debug("found device from API: " + device);
+            this.log.debug('found device from API: ' + device);
             const uuid = this.api.hap.uuid.generate(device.serialNumber);
             // see if an accessory with the same uuid has already been registered and restored from
             // the cached devices we stored in the `configureAccessory` method above

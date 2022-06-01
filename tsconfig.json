@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES2018",
     "useUnknownInCatchVariables": false,
-    "module": "commonjs",
+	"module": "node16",
     "lib": [
       "ES2015",
       "ES2016",

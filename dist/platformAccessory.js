@@ -26,9 +26,9 @@ class MolekulePlatformAccessory {
             state: 0,
             Speed: 100,
             Filter: 100,
-            On: 1,
+            On: 1
         };
-        this.caller = new cognito_1.httpAJAX(this.log, this.config);
+        this.caller = new cognito_1.HttpAJAX(this.log, this.config);
         // set accessory information
         this.accessory.getService(this.platform.Service.AccessoryInformation)
             .setCharacteristic(this.platform.Characteristic.Manufacturer, 'Molekule')
@@ -79,12 +79,11 @@ class MolekulePlatformAccessory {
      */
     async handleActiveSet(value) {
         // implement your own code to turn your device on/off
+        let data = '"on"}';
         if (!value)
-            var data = '"off"}';
-        else
-            var data = '"on"}';
-        this.platform.log.info("Attempt handleActiveSet: " + value);
-        if (await this.caller.httpCall('POST', this.accessory.context.device.serialNumber + '/actions/set-power-status', '{"status":' + data, 1) == 204) {
+            data = '"off"}';
+        this.platform.log.info('Attempt handleActiveSet: ' + value);
+        if (await this.caller.httpCall('POST', this.accessory.context.device.serialNumber + '/actions/set-power-status', '{"status":' + data, 1) === 204) {
             this.service.updateCharacteristic(this.platform.Characteristic.Active, value);
             if (value) {
                 this.service.updateCharacteristic(this.platform.Characteristic.CurrentAirPurifierState, 2);
@@ -102,7 +101,7 @@ class MolekulePlatformAccessory {
      * These are sent when HomeKit wants to know the current state of the accessory, for example, checking if a Light bulb is on.
      *
      * GET requests should return as fast as possbile. A long delay here will result in
-     * HomeKit being unresponsive and a bad user experience in general.
+     * HomeKit being unresponsive and a bad user experience() in general.
      *
      * If your device takes time to respond you should update the status of your device
      * asynchronously instead using the `updateCharacteristic` method instead.
@@ -111,10 +110,8 @@ class MolekulePlatformAccessory {
      */
     async handleActiveGet() {
         // implement your own code to check if the device is on
-        const response = await this.caller.httpCall('GET', '', null, 1);
-        if (response.status == 200)
-            this.updateStates(response);
-        this.log.info("handleActiveGet() returns: " + this.state.On);
+        this.updateStates();
+        this.log.info('handleActiveGet() returns: ' + this.state.On);
         return (this.state.On);
         // if you need to return an error to show the device as "Not Responding" in the Home app:
         // throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
@@ -123,7 +120,7 @@ class MolekulePlatformAccessory {
         return this.state.state;
     }
     async handleAutoSet(value) {
-        this.log.debug("Homekit attempted to set auto/manual state but it is not yet implemented ☹");
+        this.log.debug('Homekit attempted to set auto/manual "+value+" state but it is not yet implemented ☹');
         this.service.updateCharacteristic(this.platform.Characteristic.TargetAirPurifierState, 0);
     }
     async handleAutoGet() {
@@ -135,17 +132,16 @@ class MolekulePlatformAccessory {
      */
     async setSpeed(value) {
         // implement your own code to set the speed
-        var clamp = Math.round(Math.min(Math.max(value / 20, 1), 5));
-        if (await this.caller.httpCall('POST', this.accessory.context.device.serialNumber + "/actions/set-fan-speed", '{"fanSpeed": ' + clamp + '}', 1) == 204)
+        const clamp = Math.round(Math.min(Math.max(value / 20, 1), 5));
+        if (await this.caller.httpCall('POST', this.accessory.context.device.serialNumber + '/actions/set-fan-speed', '{"fanSpeed": ' + clamp + '}', 1) === 204)
             this.state.Speed = clamp * 20;
         this.platform.log.info('Set Characteristic speed -> ', '{"fanSpeed":' + clamp + '}');
         this.service.updateCharacteristic(this.platform.Characteristic.RotationSpeed, this.state.Speed);
-        return;
     }
     async getSpeed() {
-        //const response = await this.caller.httpCall('GET', '', null, 1);
-        //if (response.status != 200) return this.state.Speed;
-        //this.updateStates(response);
+        // const response = await this.caller.httpCall('GET', '', null, 1);
+        //return this.state.Speed;
+        // this.updateStates(response);
         return this.state.Speed;
     }
     async getFilterChange() {
@@ -155,19 +151,19 @@ class MolekulePlatformAccessory {
             return 1;
     }
     async getFilterStatus() {
-        this.log.debug("Check Filter State: " + this.state.Filter);
+        this.log.debug('Check Filter State: ' + this.state.Filter);
         return this.state.Filter;
     }
-    updateStates(response) {
-        response = response.json();
-        for (let i = 0; i < (Object.keys(response["content"]).length); i++)
-            if (response["content"][i]["serialNumber"] == this.accessory.context.device.serialNumber) {
-                this.platform.log.info('Get Speed ->', response["content"][i]["fanspeed"]);
-                this.state.Speed = (response["content"][i]["fanspeed"]) * 20;
-                this.state.Filter = (response["content"][i]["pecoFilter"]);
-                if (response["content"][i]["online"] == "false")
-                    throw new this.platform.api.hap.HapStatusError(-70402 /* SERVICE_COMMUNICATION_FAILURE */);
-                else if (response["content"][i]["mode"] != 'off') {
+    async updateStates() {
+        const response = await this.caller.httpCall('GET', '', null, 1);
+        for (let i = 0; i < (Object.keys(response.content).length); i++) {
+            if (response.content[i].serialNumber === this.accessory.context.device.serialNumber) {
+                this.platform.log.info('Get Speed ->', response.content[i].fanspeed);
+                this.state.Speed = (response.content[i].fanspeed) * 20;
+                this.state.Filter = (response.content[i].pecoFilter);
+                if (response.content[i].online === 'false')
+                    throw new this.platform.api.hap.HapStatusError(-70402 /* this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE */);
+                else if (response.content[i].mode !== 'off') {
                     this.state.On = 1;
                     this.state.state = 2;
                 }
@@ -176,6 +172,7 @@ class MolekulePlatformAccessory {
                     this.state.state = 0;
                 }
             }
+        }
         this.service.updateCharacteristic(this.platform.Characteristic.RotationSpeed, this.state.Speed);
         this.service.updateCharacteristic(this.platform.Characteristic.CurrentAirPurifierState, this.state.state);
         this.service.updateCharacteristic(this.platform.Characteristic.Active, this.state.On);

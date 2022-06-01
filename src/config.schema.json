@@ -1,0 +1,23 @@
+{
+  "pluginAlias": "Molekule",
+  "pluginType": "platform",
+  "singular": false,
+  "schema": {
+    "type": "object",
+    "properties": {
+      "login": {
+        "title": "Email",
+        "type": "string",
+        "format": "email",
+        "placeholder": "example@example.com",
+        "required": true
+      },
+      "password": {
+          "title": "Password",
+          "type": "string",
+          "placeholder": "********",
+          "required": true
+      }
+    }
+  }
+}

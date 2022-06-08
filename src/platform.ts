@@ -2,7 +2,10 @@ import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, 
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings'
 import { MolekulePlatformAccessory } from './platformAccessory'
 import { HttpAJAX } from './cognito'
-
+interface deviceData {
+  name: string
+  serialNumber: string
+}
 /**
  * HomebridgePlatform
  * This class is the main constructor for your plugin, this is where you should
@@ -19,7 +22,7 @@ export class MolekuleHomebridgePlatform implements DynamicPlatformPlugin {
     public readonly log: Logger,
     public readonly config: PlatformConfig,
     public readonly api: API,
-    private caller = new HttpAJAX(log, config)
+    private caller = new HttpAJAX(log, config),
   ) {
     // When this event is fired it means Homebridge has restored all cached accessories from disk.
     // Dynamic Platform plugins should only register new accessories after this event was fired,
@@ -55,14 +58,19 @@ export class MolekuleHomebridgePlatform implements DynamicPlatformPlugin {
     // EXAMPLE ONLY
     // A real plugin you would discover accessories from the local network, cloud services
     // or a user-defined array in the platform config.
-    const devices = await this.caller.httpCall('GET', '', null, 1).catch(e => {return e});
+    const response = this.caller.httpCall('GET', '', '', 1);
+    const devices = await (await response).json();
     // loop over the discovered devices and register each one if it has not already been registered
-    if (devices === undefined) return; //prevent crashes
-    devices.content.forEach((device : any) => {
+    if ((await response).status !== 200) 
+    {
+      this.log.error('Fatal error, discover devices failed. Try running homebridge in debug mode to see HTTP status code.')
+      return; //prevent crashes
+    }
+    devices.content.forEach((device : deviceData) => {
       // generate a unique id for the accessory this should be generated from
       // something globally unique, but constant, for example, the device serial
       // number or MAC address
-      this.log.debug('found device from API: ' + device)
+      this.log.debug('found device from API: ' + JSON.stringify(device))
       const uuid = this.api.hap.uuid.generate(device.serialNumber)
 
       // see if an accessory with the same uuid has already been registered and restored from

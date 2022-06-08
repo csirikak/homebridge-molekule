@@ -5,7 +5,13 @@
   "schema": {
     "type": "object",
     "properties": {
-      "login": {
+      "name": {
+        "title": "Name",
+        "type": "string",
+        "default": "homebridge-molekule",
+        "required": true
+      },
+      "email": {
         "title": "Email",
         "type": "string",
         "format": "email",
@@ -16,7 +22,16 @@
           "title": "Password",
           "type": "string",
           "placeholder": "********",
-          "required": true
+          "required": true,
+          "description": "<b>Ensure password is correct, othersise a reset may become necessary.</b>"
+      },
+      "threshold": {
+          "title": "Filter Change Warning Percentage",
+          "type": "integer",
+          "default": 5,
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Show <b>Change Filter</b> warning once Filter Life reaches this value."
       }
     }
   }

@@ -48,39 +48,39 @@ class HttpAJAX {
             }
         }));
     }
-    ;
     async httpCall(method, extraUrl, send, retry) {
+        let response;
         if ((token === '') || authError)
-            await this.initiateAuth();
+            await this.initiateAuth().catch(e => { this.log.debug(e); return; });
         if (method === 'GET') {
             const contents = {
                 method,
                 headers: { authorization: token, 'x-api-version': '1.0', 'content-type': 'application/json' }
             };
-            const response = await fetch(url + extraUrl, contents);
+            response = await fetch(url + extraUrl, contents);
             this.log.debug('HTTP GET STATUS: ' + response.status);
-            this.log.debug('HTTP GET CONTENTS: ' + response);
+            this.log.debug('HTTP GET CONTENTS: ' + JSON.stringify(response));
             if (response.status === 401 && retry > 0) {
                 authError = true;
                 return await this.httpCall(method, extraUrl, send, retry - 1);
             }
             else
-                return response.json();
+                return response;
         }
-        else if (method === 'POST') {
+        else {
             const contents = {
                 method,
                 body: send,
                 headers: { authorization: token, 'x-api-version': '1.0', 'content-type': 'application/json' }
             };
-            const response = await fetch(url + extraUrl, contents);
+            response = await fetch(url + extraUrl, contents);
             this.log.debug('HTTP POST STATUS: ' + response.status + ' With contents: ' + send);
             if (response.status === 401 && retry > 0) {
                 authError = true;
                 return await this.httpCall(method, extraUrl, send, retry - 1);
             }
-            return response.status;
         }
+        return response;
     }
 }
 exports.HttpAJAX = HttpAJAX;

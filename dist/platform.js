@@ -49,16 +49,18 @@ class MolekuleHomebridgePlatform {
         // EXAMPLE ONLY
         // A real plugin you would discover accessories from the local network, cloud services
         // or a user-defined array in the platform config.
-        let devices = await this.caller.httpCall('GET', '', null, 1).catch(e => { return; });
-        // this.log.debug(await this.caller.httpCall('GET', '', null, 1).catch(e => { return }));
+        const response = this.caller.httpCall('GET', '', '', 1);
+        const devices = await (await response).json();
         // loop over the discovered devices and register each one if it has not already been registered
-        if (devices === undefined)
+        if ((await response).status !== 200) {
+            this.log.error('Fatal error, discover devices failed. Try running homebridge in debug mode to see HTTP status code.');
             return; //prevent crashes
+        }
         devices.content.forEach((device) => {
             // generate a unique id for the accessory this should be generated from
             // something globally unique, but constant, for example, the device serial
             // number or MAC address
-            this.log.debug('found device from API: ' + device);
+            this.log.debug('found device from API: ' + JSON.stringify(device));
             const uuid = this.api.hap.uuid.generate(device.serialNumber);
             // see if an accessory with the same uuid has already been registered and restored from
             // the cached devices we stored in the `configureAccessory` method above
@@ -93,7 +95,6 @@ class MolekuleHomebridgePlatform {
             }
         });
     }
-    ;
 }
 exports.MolekuleHomebridgePlatform = MolekuleHomebridgePlatform;
 //# sourceMappingURL=platform.js.map

@@ -1,9 +1,4 @@
 "use strict";
-/** TODO:
- * - Add air quality characteristic.
- * - Clean up attribute updates from get requests.
- * - Ensure error cases are properly handled.
- *  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MolekulePlatformAccessory = void 0;
 const cognito_1 = require("./cognito");
@@ -37,8 +32,6 @@ class MolekulePlatformAccessory {
         // get the AirPurifier service if it exists, otherwise create a new AirPurifier service
         // you can create multiple services for each accessory
         this.service = this.accessory.getService(this.platform.Service.AirPurifier) || this.accessory.addService(this.platform.Service.AirPurifier);
-        // The filter service is not yet integrated with the AirPurifier service in the Homekit client, use a third party app like Eve to see it.
-        this.filterService = this.accessory.getService('filterService') || this.accessory.addService(this.platform.Service.FilterMaintenance, 'filterService', 'filterID');
         // set the service name, this is what is displayed as the default name on the Home app
         // in this example we are using the name we stored in the `accessory.context` in the `discoverDevices` method.
         this.service.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.name);
@@ -58,9 +51,9 @@ class MolekulePlatformAccessory {
         this.service.getCharacteristic(this.platform.Characteristic.RotationSpeed)
             .onSet(this.setSpeed.bind(this))
             .onGet(this.getSpeed.bind(this));
-        this.filterService.getCharacteristic(this.platform.Characteristic.FilterChangeIndication)
+        this.service.getCharacteristic(this.platform.Characteristic.FilterChangeIndication)
             .onGet(this.getFilterChange.bind(this));
-        this.filterService.getCharacteristic(this.platform.Characteristic.FilterLifeLevel)
+        this.service.getCharacteristic(this.platform.Characteristic.FilterLifeLevel)
             .onGet(this.getFilterStatus.bind(this));
         /**
          * Creating multiple services of the same type.
@@ -82,8 +75,8 @@ class MolekulePlatformAccessory {
         let data = '"on"}';
         if (!value)
             data = '"off"}';
-        this.platform.log.info('Attempt handleActiveSet: ' + value);
-        if (await this.caller.httpCall('POST', this.accessory.context.device.serialNumber + '/actions/set-power-status', '{"status":' + data, 1) === 204) {
+        const response = await this.caller.httpCall('POST', this.accessory.context.device.serialNumber + '/actions/set-power-status', '{"status":' + data, 1);
+        if (response.status === 204) {
             this.service.updateCharacteristic(this.platform.Characteristic.Active, value);
             if (value) {
                 this.service.updateCharacteristic(this.platform.Characteristic.CurrentAirPurifierState, 2);
@@ -95,6 +88,7 @@ class MolekulePlatformAccessory {
                 this.state.On = 0;
             }
         }
+        this.platform.log.info('Attempt handleActiveSet: ' + value + ' Server Reply: ' + JSON.stringify(response));
     }
     /**
      * Handle the "GET" requests from HomeKit
@@ -120,7 +114,7 @@ class MolekulePlatformAccessory {
         return this.state.state;
     }
     async handleAutoSet(value) {
-        this.log.debug('Homekit attempted to set auto/manual "+value+" state but it is not yet implemented ☹');
+        this.log.debug('Homekit attempted to set auto/manual (' + value + ') state but it is not yet implemented ☹');
         this.service.updateCharacteristic(this.platform.Characteristic.TargetAirPurifierState, 0);
     }
     async handleAutoGet() {
@@ -133,19 +127,16 @@ class MolekulePlatformAccessory {
     async setSpeed(value) {
         // implement your own code to set the speed
         const clamp = Math.round(Math.min(Math.max(value / 20, 1), 5));
-        if (await this.caller.httpCall('POST', this.accessory.context.device.serialNumber + '/actions/set-fan-speed', '{"fanSpeed": ' + clamp + '}', 1) === 204)
+        if ((await this.caller.httpCall('POST', this.accessory.context.device.serialNumber + '/actions/set-fan-speed', '{"fanSpeed": ' + clamp + '}', 1)).status === 204)
             this.state.Speed = clamp * 20;
         this.platform.log.info('Set Characteristic speed -> ', '{"fanSpeed":' + clamp + '}');
         this.service.updateCharacteristic(this.platform.Characteristic.RotationSpeed, this.state.Speed);
     }
     async getSpeed() {
-        // const response = await this.caller.httpCall('GET', '', null, 1);
-        //return this.state.Speed;
-        // this.updateStates(response);
         return this.state.Speed;
     }
     async getFilterChange() {
-        if (this.state.Filter > 10)
+        if (this.state.Filter >= this.config.threshold)
             return 0;
         else
             return 1;
@@ -155,15 +146,17 @@ class MolekulePlatformAccessory {
         return this.state.Filter;
     }
     async updateStates() {
-        const response = await this.caller.httpCall('GET', '', null, 1);
+        const re = await this.caller.httpCall('GET', '', '', 1);
+        const response = (await re.json());
+        if (response === undefined)
+            return;
         for (let i = 0; i < (Object.keys(response.content).length); i++) {
             if (response.content[i].serialNumber === this.accessory.context.device.serialNumber) {
                 this.platform.log.info('Get Speed ->', response.content[i].fanspeed);
                 this.state.Speed = (response.content[i].fanspeed) * 20;
                 this.state.Filter = (response.content[i].pecoFilter);
-                if (response.content[i].online === 'false')
-                    throw new this.platform.api.hap.HapStatusError(-70402 /* this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE */);
-                else if (response.content[i].mode !== 'off') {
+                //if (response.content[i].online === 'false') throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE)
+                if (response.content[i].mode !== 'off') {
                     this.state.On = 1;
                     this.state.state = 2;
                 }

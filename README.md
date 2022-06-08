@@ -5,9 +5,10 @@ Hey Siri, what's the status of the Air Purifier Filter?
 Hey Siri, set the speed of the Molekule to 60%.
 ```
 ## Installation
-Copy and paste the following into a terminal
+Search for Molekule under Plugins in the Homebridge UI
+Or, copy and paste the following into a terminal
 ```bash
-npm -g i https://github.com/csirikak/homebridge-molekule/releases/download/v1.0.1/homebridge-molekule-1.0.1.tgz
+npm -g i homebridge-molekule
 ```
 ## Configuration
 It should be configurable in plugin settings using homebridge-ui-x, if not, add this to your config.json file under Platforms.
@@ -16,7 +17,8 @@ It should be configurable in plugin settings using homebridge-ui-x, if not, add 
   "platform": "Molekule",
   "name": "homebridge-molekule",
   "email": "YOUR EMAIL HERE",
-  "password": "YOUR PASSWORD HERE"
+  "password": "YOUR PASSWORD HERE",
+  "threshold": 10
 }
 ```
 # Notes and Issues

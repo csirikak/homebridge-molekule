@@ -5,7 +5,7 @@ Hey Siri, what's the status of the Air Purifier Filter?
 Hey Siri, set the speed of the Molekule to 60%.
 ```
 ## Installation
-Search for Molekule under Plugins in the Homebridge UI
+Search for Molekule under Plugins in the Homebridge UI.
 Or, copy and paste the following into a terminal
 ```bash
 npm -g i homebridge-molekule

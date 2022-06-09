@@ -165,7 +165,10 @@ export class MolekulePlatformAccessory {
         this.platform.log.info('Get Speed ->', response.content[i].fanspeed)
         this.state.Speed = (response.content[i].fanspeed) * 20
         this.state.Filter = (response.content[i].pecoFilter)
-        //if (response.content[i].online === 'false') throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE)
+        if (response.content[i].online === 'false') {
+          this.log.info(this.accessory.context.device.name+' was reported to be offline by the Molekule API.')
+          throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE)
+        }
         if (response.content[i].mode !== 'off') {
           this.state.On = 1
           this.state.state = 2

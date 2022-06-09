@@ -55,9 +55,6 @@ export class MolekuleHomebridgePlatform implements DynamicPlatformPlugin {
    */
   async discoverDevices () {
     this.log.debug('Discover Devices Called')
-    // EXAMPLE ONLY
-    // A real plugin you would discover accessories from the local network, cloud services
-    // or a user-defined array in the platform config.
     const response = this.caller.httpCall('GET', '', '', 1);
     const devices = await (await response).json();
     // loop over the discovered devices and register each one if it has not already been registered

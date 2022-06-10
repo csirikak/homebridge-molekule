@@ -19,9 +19,9 @@ class MolekulePlatformAccessory {
          */
         this.state = {
             state: 0,
-            Speed: 100,
+            Speed: 0,
             Filter: 100,
-            On: 1
+            On: 0
         };
         this.caller = new cognito_1.HttpAJAX(this.log, this.config);
         // set accessory information
@@ -88,7 +88,7 @@ class MolekulePlatformAccessory {
                 this.state.On = 0;
             }
         }
-        this.platform.log.info('Attempt handleActiveSet: ' + value + ' Server Reply: ' + JSON.stringify(response));
+        this.platform.log.info('Attempted to set: ' + value + ' state on device: ' + this.accessory.context.device.name + ' Server Reply: ' + JSON.stringify(response));
     }
     /**
      * Handle the "GET" requests from HomeKit
@@ -103,9 +103,8 @@ class MolekulePlatformAccessory {
      * this.service.updateCharacteristic(this.platform.Characteristic.On, true)
      */
     async handleActiveGet() {
-        // implement your own code to check if the device is on
         this.updateStates();
-        this.log.info('handleActiveGet() returns: ' + this.state.On);
+        this.log.info(this.accessory.context.device.name + ' state is: ' + this.state.On);
         return (this.state.On);
         // if you need to return an error to show the device as "Not Responding" in the Home app:
         // throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
@@ -114,6 +113,7 @@ class MolekulePlatformAccessory {
         return this.state.state;
     }
     async handleAutoSet(value) {
+        //TODO figure this out: "/users/me/devices/{serialNumber}/actions/enable-smart-mode"
         this.log.debug('Homekit attempted to set auto/manual (' + value + ') state but it is not yet implemented ☹');
         this.service.updateCharacteristic(this.platform.Characteristic.TargetAirPurifierState, 0);
     }
@@ -125,18 +125,17 @@ class MolekulePlatformAccessory {
      * These are sent when the user changes the state of an accessory, for example, changing the speed
      */
     async setSpeed(value) {
-        // implement your own code to set the speed
         const clamp = Math.round(Math.min(Math.max(value / 20, 1), 5));
         if ((await this.caller.httpCall('POST', this.accessory.context.device.serialNumber + '/actions/set-fan-speed', '{"fanSpeed": ' + clamp + '}', 1)).status === 204)
             this.state.Speed = clamp * 20;
-        this.platform.log.info('Set Characteristic speed -> ', '{"fanSpeed":' + clamp + '}');
+        this.platform.log.info(this.accessory.context.device.name + ' set speed -> ', '{"fanSpeed":' + clamp + '}');
         this.service.updateCharacteristic(this.platform.Characteristic.RotationSpeed, this.state.Speed);
     }
     async getSpeed() {
         return this.state.Speed;
     }
     async getFilterChange() {
-        if (this.state.Filter >= this.config.threshold)
+        if (this.state.Filter > this.config.threshold)
             return 0;
         else
             return 1;
@@ -155,7 +154,10 @@ class MolekulePlatformAccessory {
                 this.platform.log.info('Get Speed ->', response.content[i].fanspeed);
                 this.state.Speed = (response.content[i].fanspeed) * 20;
                 this.state.Filter = (response.content[i].pecoFilter);
-                //if (response.content[i].online === 'false') throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE)
+                if (response.content[i].online === 'false') {
+                    this.log.error(this.accessory.context.device.name + ' was reported to be offline by the Molekule API.');
+                    throw new this.platform.api.hap.HapStatusError(-70402 /* this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE */);
+                }
                 if (response.content[i].mode !== 'off') {
                     this.state.On = 1;
                     this.state.state = 2;

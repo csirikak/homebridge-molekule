@@ -15,9 +15,9 @@ export class MolekulePlatformAccessory {
    */
   private state = {
     state: 0,
-    Speed: 100,
+    Speed: 0,
     Filter: 100,
-    On: 1
+    On: 0
   }
 
   constructor (
@@ -93,7 +93,7 @@ export class MolekulePlatformAccessory {
         this.state.On = 0
       }
     }
-    this.platform.log.info('Attempt handleActiveSet: ' + value + ' Server Reply: '+JSON.stringify(response))
+    this.platform.log.info('Attempted to set: ' + value + ' state on device: ' + this.accessory.context.device.name + ' Server Reply: '+JSON.stringify(response))
   }
 
   /**
@@ -109,9 +109,8 @@ export class MolekulePlatformAccessory {
    * this.service.updateCharacteristic(this.platform.Characteristic.On, true)
    */
   async handleActiveGet (): Promise<CharacteristicValue> {
-    // implement your own code to check if the device is on
     this.updateStates();
-    this.log.info('handleActiveGet() returns: ' + this.state.On);
+    this.log.info(this.accessory.context.device.name+' state is: ' + this.state.On);
     return (this.state.On)
     // if you need to return an error to show the device as "Not Responding" in the Home app:
     // throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
@@ -122,6 +121,7 @@ export class MolekulePlatformAccessory {
   }
 
   async handleAutoSet (value:CharacteristicValue) {
+    //TODO figure this out: "/users/me/devices/{serialNumber}/actions/enable-smart-mode"
     this.log.debug('Homekit attempted to set auto/manual ('+value+') state but it is not yet implemented ☹')
     this.service.updateCharacteristic(this.platform.Characteristic.TargetAirPurifierState, 0)
   }
@@ -135,10 +135,9 @@ export class MolekulePlatformAccessory {
    * These are sent when the user changes the state of an accessory, for example, changing the speed
    */
   async setSpeed (value: CharacteristicValue) {
-    // implement your own code to set the speed
     const clamp = Math.round(Math.min(Math.max((value as number) / 20, 1), 5))
     if ((await this.caller.httpCall('POST', this.accessory.context.device.serialNumber + '/actions/set-fan-speed', '{"fanSpeed": ' + clamp + '}', 1)).status === 204) this.state.Speed = clamp * 20
-    this.platform.log.info('Set Characteristic speed -> ', '{"fanSpeed":' + clamp + '}')
+    this.platform.log.info(this.accessory.context.device.name+' set speed -> ', '{"fanSpeed":' + clamp + '}')
     this.service.updateCharacteristic(this.platform.Characteristic.RotationSpeed, this.state.Speed)
   }
 
@@ -147,7 +146,7 @@ export class MolekulePlatformAccessory {
   }
 
   async getFilterChange (): Promise<CharacteristicValue> {
-    if (this.state.Filter >= this.config.threshold) return 0
+    if (this.state.Filter > this.config.threshold) return 0
     else return 1
   }
 
@@ -166,7 +165,7 @@ export class MolekulePlatformAccessory {
         this.state.Speed = (response.content[i].fanspeed) * 20
         this.state.Filter = (response.content[i].pecoFilter)
         if (response.content[i].online === 'false') {
-          this.log.info(this.accessory.context.device.name+' was reported to be offline by the Molekule API.')
+          this.log.error(this.accessory.context.device.name+' was reported to be offline by the Molekule API.')
           throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE)
         }
         if (response.content[i].mode !== 'off') {

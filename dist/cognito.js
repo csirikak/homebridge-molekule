@@ -4,6 +4,7 @@ exports.HttpAJAX = void 0;
 const amazon_cognito_identity_js_1 = require("amazon-cognito-identity-js");
 import('node-fetch');
 let token = '';
+let refreshToken;
 let authError;
 // Molekule API settings
 const ClientId = '1ec4fa3oriciupg94ugoi84kkk';
@@ -12,37 +13,51 @@ const url = 'https://api.molekule.com/users/me/devices/';
 class HttpAJAX {
     constructor(log, config) {
         this.log = log;
-        this.config = config;
         this.email = config.email;
         this.pass = config.password;
-    }
-    initiateAuth() {
-        const authenticationData = {
+        this.authenticationData = {
             Username: this.email,
             Password: this.pass
         };
-        const userPoolData = {
+        this.userPoolData = {
             UserPoolId: PoolId,
             ClientId
         };
-        const userPool = new amazon_cognito_identity_js_1.CognitoUserPool(userPoolData);
-        const userData = {
+        this.userPool = new amazon_cognito_identity_js_1.CognitoUserPool(this.userPoolData);
+        this.userData = {
             Username: this.email,
-            Pool: userPool
+            Pool: this.userPool
         };
-        const authenticationDetails = new amazon_cognito_identity_js_1.AuthenticationDetails(authenticationData);
-        const cognitoUser = new amazon_cognito_identity_js_1.CognitoUser(userData);
+        this.authenticationDetails = new amazon_cognito_identity_js_1.AuthenticationDetails(this.authenticationData);
+        this.cognitoUser = new amazon_cognito_identity_js_1.CognitoUser(this.userData);
+    }
+    refreshAuthToken() {
+        return new Promise((resolve, reject) => this.cognitoUser.refreshSession(refreshToken, (err, session) => {
+            if (err) {
+                this.log.info('Auth token fetch using refresh token failed. Fallback to username/password');
+                this.log.debug(err);
+                reject(err);
+            }
+            else {
+                this.log.info('✓ Token refresh successful');
+                authError = false;
+                token = session.getAccessToken().getJwtToken();
+                resolve(session);
+            }
+        }));
+    }
+    initiateAuth() {
         this.log.debug('email: ' + this.email);
         this.log.debug('password: ' + this.pass);
-        return new Promise((resolve, reject) => cognitoUser.authenticateUser(authenticationDetails, {
+        return new Promise((resolve, reject) => this.cognitoUser.authenticateUser(this.authenticationDetails, {
             onSuccess: (result) => {
                 token = result.getAccessToken().getJwtToken();
+                refreshToken = result.getRefreshToken();
                 this.log.info('✓ Valid Login Credentials');
                 authError = false;
                 resolve(result.getAccessToken().getJwtToken());
             },
             onFailure: (err) => {
-                this.log.debug(err);
                 this.log.error('API Authentication Failure, possibly a password/username error.');
                 reject(err);
             }
@@ -50,8 +65,10 @@ class HttpAJAX {
     }
     async httpCall(method, extraUrl, send, retry) {
         let response;
+        if (authError)
+            await this.refreshAuthToken().catch(e => { this.initiateAuth().catch(e => { this.log.error(e); return; }); });
         if ((token === '') || authError)
-            await this.initiateAuth().catch(e => { this.log.debug(e); return; });
+            await this.initiateAuth().catch(e => { this.log.error(e); return; });
         if (method === 'GET') {
             const contents = {
                 method,

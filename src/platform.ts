@@ -6,6 +6,8 @@ interface deviceData {
   name: string
   serialNumber: string
 }
+let intervalID: NodeJS.Timer
+const refreshInterval = 60 //token refresh interval in minutes
 /**
  * HomebridgePlatform
  * This class is the main constructor for your plugin, this is where you should
@@ -32,6 +34,7 @@ export class MolekuleHomebridgePlatform implements DynamicPlatformPlugin {
       log.debug('Executed didFinishLaunching callback')
       // run the method to discover / register your devices as accessories
       this.discoverDevices()
+      if (!intervalID) intervalID = setInterval(() => this.caller.refreshAuthToken(), refreshInterval*60*1000)
     })
     this.log.debug('Finished initializing platform ', PLATFORM_NAME)
   }

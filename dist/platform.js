@@ -4,6 +4,8 @@ exports.MolekuleHomebridgePlatform = void 0;
 const settings_1 = require("./settings");
 const platformAccessory_1 = require("./platformAccessory");
 const cognito_1 = require("./cognito");
+let intervalID;
+const refreshInterval = 60; //token refresh interval in minutes
 /**
  * HomebridgePlatform
  * This class is the main constructor for your plugin, this is where you should
@@ -27,6 +29,8 @@ class MolekuleHomebridgePlatform {
             log.debug('Executed didFinishLaunching callback');
             // run the method to discover / register your devices as accessories
             this.discoverDevices();
+            if (!intervalID)
+                intervalID = setInterval(() => this.caller.refreshAuthToken(), refreshInterval * 60 * 1000);
         });
         this.log.debug('Finished initializing platform ', settings_1.PLATFORM_NAME);
     }
@@ -46,9 +50,6 @@ class MolekuleHomebridgePlatform {
      */
     async discoverDevices() {
         this.log.debug('Discover Devices Called');
-        // EXAMPLE ONLY
-        // A real plugin you would discover accessories from the local network, cloud services
-        // or a user-defined array in the platform config.
         const response = this.caller.httpCall('GET', '', '', 1);
         const devices = await (await response).json();
         // loop over the discovered devices and register each one if it has not already been registered

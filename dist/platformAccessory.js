@@ -28,7 +28,8 @@ class MolekulePlatformAccessory {
         this.accessory.getService(this.platform.Service.AccessoryInformation)
             .setCharacteristic(this.platform.Characteristic.Manufacturer, 'Molekule')
             .setCharacteristic(this.platform.Characteristic.Model, accessory.context.device.model)
-            .setCharacteristic(this.platform.Characteristic.SerialNumber, accessory.context.device.serialNumber);
+            .setCharacteristic(this.platform.Characteristic.SerialNumber, accessory.context.device.serialNumber)
+            .setCharacteristic(this.platform.Characteristic.FirmwareRevision, accessory.context.device.firmwareVersion);
         // get the AirPurifier service if it exists, otherwise create a new AirPurifier service
         // you can create multiple services for each accessory
         this.service = this.accessory.getService(this.platform.Service.AirPurifier) || this.accessory.addService(this.platform.Service.AirPurifier);
@@ -103,7 +104,8 @@ class MolekulePlatformAccessory {
      * this.service.updateCharacteristic(this.platform.Characteristic.On, true)
      */
     async handleActiveGet() {
-        this.updateStates();
+        if (await this.updateStates() === 1)
+            throw new this.platform.api.hap.HapStatusError(-70402 /* this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE */);
         this.log.info(this.accessory.context.device.name + ' state is: ' + this.state.On);
         return (this.state.On);
         // if you need to return an error to show the device as "Not Responding" in the Home app:
@@ -148,7 +150,7 @@ class MolekulePlatformAccessory {
         const re = await this.caller.httpCall('GET', '', '', 1);
         const response = (await re.json());
         if (response === undefined)
-            return;
+            return 1;
         for (let i = 0; i < (Object.keys(response.content).length); i++) {
             if (response.content[i].serialNumber === this.accessory.context.device.serialNumber) {
                 this.platform.log.info('Get Speed ->', response.content[i].fanspeed);
@@ -156,7 +158,7 @@ class MolekulePlatformAccessory {
                 this.state.Filter = (response.content[i].pecoFilter);
                 if (response.content[i].online === 'false') {
                     this.log.error(this.accessory.context.device.name + ' was reported to be offline by the Molekule API.');
-                    throw new this.platform.api.hap.HapStatusError(-70402 /* this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE */);
+                    return 1;
                 }
                 if (response.content[i].mode !== 'off') {
                     this.state.On = 1;
@@ -171,6 +173,7 @@ class MolekulePlatformAccessory {
         this.service.updateCharacteristic(this.platform.Characteristic.RotationSpeed, this.state.Speed);
         this.service.updateCharacteristic(this.platform.Characteristic.CurrentAirPurifierState, this.state.state);
         this.service.updateCharacteristic(this.platform.Characteristic.Active, this.state.On);
+        return 0;
     }
 }
 exports.MolekulePlatformAccessory = MolekulePlatformAccessory;

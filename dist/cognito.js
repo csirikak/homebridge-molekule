@@ -66,9 +66,9 @@ class HttpAJAX {
     async httpCall(method, extraUrl, send, retry) {
         let response;
         if (authError)
-            await this.refreshAuthToken().catch(e => { this.initiateAuth().catch(e => { this.log.error(e); return; }); });
+            await this.refreshAuthToken().catch(e => { this.initiateAuth().catch(e => { this.log.error(e); return; }); this.log.debug(e); });
         if ((token === '') || authError)
-            await this.initiateAuth().catch(e => { this.log.error(e); return; });
+            await this.initiateAuth().catch(err => { this.log.error(err); return; });
         if (method === 'GET') {
             const contents = {
                 method,

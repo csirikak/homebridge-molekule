@@ -137,9 +137,10 @@ export class MolekulePlatformAccessory {
       this.service.updateCharacteristic(this.platform.Characteristic.TargetAirPurifierState, 0);
     }
     else {
-      if ((await this.caller.httpCall("POST", this.accessory.context.device.serialNumber + "/actions/enable-smart-mode", '{"silent": ' + value + "}", 1)).status === 204) {
+      if ((await this.caller.httpCall("POST", this.accessory.context.device.serialNumber + "/actions/enable-smart-mode", '{"silent": ' + (value as number) + "}", 1)).status === 204) {
         this.service.updateCharacteristic(this.platform.Characteristic.TargetAirPurifierState, value);
         this.log.debug("Homekit attempted to set " + value? "auto " : "manual " + "state.");
+        this.state.auto = value as number;
       }
     }
   }
@@ -187,10 +188,19 @@ export class MolekulePlatformAccessory {
         this.state.Speed = response.content[i].fanspeed * 100/this.maxSpeed;
         this.state.Filter = response.content[i].pecoFilter;
         this.state.auto = +!!(response.content[i].mode === "smart") //+!! cast boolean to number
-        /*
-        this.state.airQuality = response.content[i].aqi
-        TODO: Find out how AQI values are delivered in API.
-        */
+        switch (response.content[i].aqi){
+          case "good":
+            this.state.airQuality = 1;
+          case "moderate":
+            this.state.airQuality = 3;
+          case "bad":
+            this.state.airQuality = 4;
+          case "very bad":
+            this.state.airQuality = 5;
+          default:
+            this.state.airQuality = 0;
+        }
+
         if (response.content[i].online === "false") {
           this.log.error(this.accessory.context.device.name + " was reported to be offline by the Molekule API.");
           return 1;

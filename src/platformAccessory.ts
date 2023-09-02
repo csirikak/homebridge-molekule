@@ -191,14 +191,19 @@ export class MolekulePlatformAccessory {
         switch (response.content[i].aqi){
           case "good":
             this.state.airQuality = 1;
+            break;
           case "moderate":
             this.state.airQuality = 3;
+            break;
           case "bad":
             this.state.airQuality = 4;
+            break;
           case "very bad":
             this.state.airQuality = 5;
+            break;
           default:
             this.state.airQuality = 0;
+            break;
         }
 
         if (response.content[i].online === "false") {

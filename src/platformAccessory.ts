@@ -138,7 +138,7 @@ export class MolekulePlatformAccessory {
       this.service.updateCharacteristic(this.platform.Characteristic.TargetAirPurifierState, 0);
     }
     else {
-      if ((await this.caller.httpCall("POST", this.accessory.context.device.serialNumber + "/actions/enable-smart-mode", '{"silent": ' + (value as number) + "}", 1)).status === 204) {
+      if ((await this.caller.httpCall("POST", this.accessory.context.device.serialNumber + "/actions/enable-smart-mode", '{"silent": "' + (value as number) + '"}', 1)).status === 204) {
         this.service.updateCharacteristic(this.platform.Characteristic.TargetAirPurifierState, value);
         this.log.debug("Homekit attempted to set " + value? "auto " : "manual " + "state.");
         this.state.auto = value as number;

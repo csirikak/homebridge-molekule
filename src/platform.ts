@@ -10,13 +10,13 @@ interface deviceData {
   serialNumber: string
   capabilities: {
     MaxFanSpeed: number
-    AutoFunctionality: boolean
+    AutoFunctionality: number
     AirQualityMonitor: boolean
   }
 }
 interface capabilities {
   MaxFanSpeed: number;
-  AutoFunctionality: boolean;
+  AutoFunctionality: number;
   AirQualityMonitor: boolean;
 }
 

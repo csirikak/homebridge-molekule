@@ -133,21 +133,36 @@ export class MolekulePlatformAccessory {
   }
 
   async handleAutoSet(value: CharacteristicValue) {
-    //TODO figure this out: "/users/me/devices/{serialNumber}/actions/enable-smart-mode"
-    if (!this.accessory.context.device.capabilities.AutoFunctionality) {
-      this.log.info("Homekit attempted to set auto/manual (" + value + ") state but your device doesn't support it ☹");
-      this.service.updateCharacteristic(this.platform.Characteristic.TargetAirPurifierState, 0);
+    let responseCode;
+    const clamp = Math.round(Math.min(Math.max((this.state.Speed) / (100/this.maxSpeed), 1), this.maxSpeed));
+    switch (this.accessory.context.device.capabilities.AutoFunctionality){
+      default:
+        this.log.info("Homekit attempted to set auto/manual (" + value + ") state but your device doesn't support it ☹");
+        this.service.updateCharacteristic(this.platform.Characteristic.TargetAirPurifierState, 0);
+        break;
+      case 1:
+        if (value === 1) responseCode = (await this.caller.httpCall("POST", this.accessory.context.device.serialNumber + "/actions/enable-smart-mode", "", 1)).status;
+        else {
+          responseCode = (await this.caller.httpCall("POST", this.accessory.context.device.serialNumber + "/actions/set-fan-speed", '{"fanSpeed": ' + clamp + "}", 1)).status;
+          this.service.updateCharacteristic(this.platform.Characteristic.RotationSpeed, this.state.Speed);
+        }
+        break;
+      case 2:
+        if (value === 1) responseCode = (await this.caller.httpCall("POST", this.accessory.context.device.serialNumber + "/actions/enable-smart-mode", '{"silent": "' + (this.config.silentAuto as number) + '"}', 1)).status
+        else {
+          responseCode = (await this.caller.httpCall("POST", this.accessory.context.device.serialNumber + "/actions/set-fan-speed", '{"fanSpeed": ' + clamp + "}", 1)).status;
+          this.service.updateCharacteristic(this.platform.Characteristic.RotationSpeed, this.state.Speed);
+        }
+        break;
+    }
+    if (responseCode === 204) {
+      this.service.updateCharacteristic(this.platform.Characteristic.TargetAirPurifierState, value);
+      this.log.info(this.accessory.context.device.name, "set", value? "auto" : "manual", "state.");
+      this.state.auto = value as number;
     }
     else {
-      if ((await this.caller.httpCall("POST", this.accessory.context.device.serialNumber + "/actions/enable-smart-mode", '{"silent": "' + (value as number) + '"}', 1)).status === 204) {
-        this.service.updateCharacteristic(this.platform.Characteristic.TargetAirPurifierState, value);
-        this.log.info(this.accessory.context.device.name, "set", value? "auto" : "manual", "state.");
-        this.state.auto = value as number;
-      }
-      else {
-        this.log.error(this.accessory.context.device.name, "failed to set auto/manual state");
-        this.service.updateCharacteristic(this.platform.Characteristic.TargetAirPurifierState, this.state.auto);
-      }
+      this.log.error(this.accessory.context.device.name, "failed to set auto/manual state");
+      this.service.updateCharacteristic(this.platform.Characteristic.TargetAirPurifierState, this.state.auto);
     }
   }
 

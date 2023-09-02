@@ -38,6 +38,12 @@
           "type": "boolean",
           "default": false,
           "description": "Exclude HomeKit enabled Air Mini+"
+      },
+      "silentAuto": {
+          "title": "Silent Auto",
+          "type": "boolean",
+          "default": false,
+          "description": "When setting Auto/Manual state, use Silent or Normal auto state on Air Pro devices?"
       }
     }
   }

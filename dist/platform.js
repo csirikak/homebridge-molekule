@@ -4,7 +4,9 @@ exports.MolekuleHomebridgePlatform = void 0;
 const settings_1 = require("./settings");
 const platformAccessory_1 = require("./platformAccessory");
 const cognito_1 = require("./cognito");
+const devices_json_1 = require("./devices.json");
 let intervalID;
+const Models = devices_json_1.models;
 const refreshInterval = 60; //token refresh interval in minutes
 /**
  * HomebridgePlatform
@@ -87,6 +89,7 @@ class MolekuleHomebridgePlatform {
                 const accessory = new this.api.platformAccessory(device.name, uuid);
                 // store a copy of the device object in the `accessory.context`
                 // the `context` property can be used to store any data about the accessory you may need
+                device.capabilities = Models[device.model];
                 accessory.context.device = device;
                 // create the accessory handler for the newly create accessory
                 // this is imported from `platformAccessory.ts`

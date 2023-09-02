@@ -2,11 +2,29 @@ import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, 
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings'
 import { MolekulePlatformAccessory } from './platformAccessory'
 import { HttpAJAX } from './cognito'
+import { models } from "./devices.json"
+
 interface deviceData {
   name: string
+  model: string
   serialNumber: string
+  capabilities: {
+    MaxFanSpeed: number
+    AutoFunctionality: boolean
+    AirQualityMonitor: boolean
+  }
+}
+interface capabilities {
+  MaxFanSpeed: number;
+  AutoFunctionality: boolean;
+  AirQualityMonitor: boolean;
+}
+
+interface JsonData {
+  [deviceName: string]: capabilities;
 }
 let intervalID: NodeJS.Timer
+const Models: JsonData = models
 const refreshInterval = 60 //token refresh interval in minutes
 /**
  * HomebridgePlatform
@@ -76,7 +94,6 @@ export class MolekuleHomebridgePlatform implements DynamicPlatformPlugin {
       // see if an accessory with the same uuid has already been registered and restored from
       // the cached devices we stored in the `configureAccessory` method above
       const existingAccessory = this.accessories.find(accessory => accessory.UUID === uuid)
-
       if (existingAccessory) {
         // the accessory already exists
         this.log.info('Restoring existing accessory from cache:', existingAccessory.displayName)
@@ -102,8 +119,9 @@ export class MolekuleHomebridgePlatform implements DynamicPlatformPlugin {
 
         // store a copy of the device object in the `accessory.context`
         // the `context` property can be used to store any data about the accessory you may need
+        device.capabilities = Models[device.model]
         accessory.context.device = device
-
+        
         // create the accessory handler for the newly create accessory
         // this is imported from `platformAccessory.ts`
         new MolekulePlatformAccessory(this, accessory, this.config, this.log)

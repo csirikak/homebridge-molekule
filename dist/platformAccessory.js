@@ -9,6 +9,7 @@ const cognito_1 = require("./cognito");
  */
 class MolekulePlatformAccessory {
     constructor(platform, accessory, config, log) {
+        var _a;
         this.platform = platform;
         this.accessory = accessory;
         this.config = config;
@@ -17,16 +18,18 @@ class MolekulePlatformAccessory {
          * These are just used to create a working example
          * You should implement your own code to track the state of your accessory
          */
+        this.maxSpeed = (_a = this.accessory.context.device.capabilities.MaxFanSpeed) !== null && _a !== void 0 ? _a : 6;
         this.state = {
             state: 0,
             Speed: 0,
             Filter: 100,
-            On: 0
+            On: 0,
         };
         this.caller = new cognito_1.HttpAJAX(this.log, this.config);
         // set accessory information
-        this.accessory.getService(this.platform.Service.AccessoryInformation)
-            .setCharacteristic(this.platform.Characteristic.Manufacturer, 'Molekule')
+        this.accessory
+            .getService(this.platform.Service.AccessoryInformation)
+            .setCharacteristic(this.platform.Characteristic.Manufacturer, "Molekule")
             .setCharacteristic(this.platform.Characteristic.Model, accessory.context.device.model)
             .setCharacteristic(this.platform.Characteristic.SerialNumber, accessory.context.device.serialNumber)
             .setCharacteristic(this.platform.Characteristic.FirmwareRevision, accessory.context.device.firmwareVersion);
@@ -39,23 +42,20 @@ class MolekulePlatformAccessory {
         // each service must implement at-minimum the "required characteristics" for the given service type
         // see https://developers.homebridge.io/#/service/AirPurifier
         // register handlers for the On/Off Characteristic
-        this.service.getCharacteristic(this.platform.Characteristic.Active)
+        this.service
+            .getCharacteristic(this.platform.Characteristic.Active)
             .onSet(this.handleActiveSet.bind(this)) // SET - bind to the `handleActiveSet` method below
             .onGet(this.handleActiveGet.bind(this)); // GET - bind to the `handleActiveGet` method below
         // register handlers for the CurrentAirPurifierState Characteristic
-        this.service.getCharacteristic(this.platform.Characteristic.CurrentAirPurifierState)
-            .onGet(this.getState.bind(this)); // GET - bind to the `getState` method below
+        this.service.getCharacteristic(this.platform.Characteristic.CurrentAirPurifierState).onGet(this.getState.bind(this)); // GET - bind to the `getState` method below
         // register handlers for the TargetAirPurifierState Characteristic
-        this.service.getCharacteristic(this.platform.Characteristic.TargetAirPurifierState)
+        this.service
+            .getCharacteristic(this.platform.Characteristic.TargetAirPurifierState)
             .onSet(this.handleAutoSet.bind(this))
             .onGet(this.handleAutoGet.bind(this));
-        this.service.getCharacteristic(this.platform.Characteristic.RotationSpeed)
-            .onSet(this.setSpeed.bind(this))
-            .onGet(this.getSpeed.bind(this));
-        this.service.getCharacteristic(this.platform.Characteristic.FilterChangeIndication)
-            .onGet(this.getFilterChange.bind(this));
-        this.service.getCharacteristic(this.platform.Characteristic.FilterLifeLevel)
-            .onGet(this.getFilterStatus.bind(this));
+        this.service.getCharacteristic(this.platform.Characteristic.RotationSpeed).onSet(this.setSpeed.bind(this)).onGet(this.getSpeed.bind(this));
+        this.service.getCharacteristic(this.platform.Characteristic.FilterChangeIndication).onGet(this.getFilterChange.bind(this));
+        this.service.getCharacteristic(this.platform.Characteristic.FilterLifeLevel).onGet(this.getFilterStatus.bind(this));
         /**
          * Creating multiple services of the same type.
          *
@@ -76,7 +76,7 @@ class MolekulePlatformAccessory {
         let data = '"on"}';
         if (!value)
             data = '"off"}';
-        const response = await this.caller.httpCall('POST', this.accessory.context.device.serialNumber + '/actions/set-power-status', '{"status":' + data, 1);
+        const response = await this.caller.httpCall("POST", this.accessory.context.device.serialNumber + "/actions/set-power-status", '{"status":' + data, 1);
         if (response.status === 204) {
             this.service.updateCharacteristic(this.platform.Characteristic.Active, value);
             if (value) {
@@ -89,7 +89,7 @@ class MolekulePlatformAccessory {
                 this.state.On = 0;
             }
         }
-        this.platform.log.info('Attempted to set: ' + value + ' state on device: ' + this.accessory.context.device.name + ' Server Reply: ' + JSON.stringify(response));
+        this.platform.log.info("Attempted to set: " + value + " state on device: " + this.accessory.context.device.name + " Server Reply: " + JSON.stringify(response));
     }
     /**
      * Handle the "GET" requests from HomeKit
@@ -104,10 +104,10 @@ class MolekulePlatformAccessory {
      * this.service.updateCharacteristic(this.platform.Characteristic.On, true)
      */
     async handleActiveGet() {
-        if (await this.updateStates() === 1)
+        if ((await this.updateStates()) === 1)
             throw new this.platform.api.hap.HapStatusError(-70402 /* this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE */);
-        this.log.info(this.accessory.context.device.name + ' state is: ' + this.state.On);
-        return (this.state.On);
+        this.log.info(this.accessory.context.device.name + " state is: " + this.state.On);
+        return this.state.On;
         // if you need to return an error to show the device as "Not Responding" in the Home app:
         // throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
     }
@@ -116,8 +116,16 @@ class MolekulePlatformAccessory {
     }
     async handleAutoSet(value) {
         //TODO figure this out: "/users/me/devices/{serialNumber}/actions/enable-smart-mode"
-        this.log.debug('Homekit attempted to set auto/manual (' + value + ') state but it is not yet implemented ☹');
-        this.service.updateCharacteristic(this.platform.Characteristic.TargetAirPurifierState, 0);
+        if (!this.accessory.context.device.capabilities.AutoFunctionality) {
+            this.log.debug("Homekit attempted to set auto/manual (" + value + ") state but your device doesn't support it ☹");
+            this.service.updateCharacteristic(this.platform.Characteristic.TargetAirPurifierState, 0);
+        }
+        else {
+            if ((await this.caller.httpCall("POST", this.accessory.context.device.serialNumber + "/actions/enable-smart-mode", '{"silent": ' + value + "}", 1)).status === 204) {
+                this.service.updateCharacteristic(this.platform.Characteristic.TargetAirPurifierState, value);
+                this.log.debug("Homekit attempted to set " + value ? "auto " : "manual " + "state.");
+            }
+        }
     }
     async handleAutoGet() {
         return 0;
@@ -127,10 +135,11 @@ class MolekulePlatformAccessory {
      * These are sent when the user changes the state of an accessory, for example, changing the speed
      */
     async setSpeed(value) {
-        const clamp = Math.round(Math.min(Math.max(value / 20, 1), 5));
-        if ((await this.caller.httpCall('POST', this.accessory.context.device.serialNumber + '/actions/set-fan-speed', '{"fanSpeed": ' + clamp + '}', 1)).status === 204)
-            this.state.Speed = clamp * 20;
-        this.platform.log.info(this.accessory.context.device.name + ' set speed -> ', '{"fanSpeed":' + clamp + '}');
+        const clamp = Math.round(Math.min(Math.max(value / (100 / this.maxSpeed), 1), this.maxSpeed));
+        if ((await this.caller.httpCall("POST", this.accessory.context.device.serialNumber + "/actions/set-fan-speed", '{"fanSpeed": ' + clamp + "}", 1)).status ===
+            204)
+            this.state.Speed = clamp * 100 / this.maxSpeed;
+        this.platform.log.info(this.accessory.context.device.name + " set speed -> ", '{"fanSpeed":' + clamp + "}");
         this.service.updateCharacteristic(this.platform.Characteristic.RotationSpeed, this.state.Speed);
     }
     async getSpeed() {
@@ -143,24 +152,24 @@ class MolekulePlatformAccessory {
             return 1;
     }
     async getFilterStatus() {
-        this.log.debug('Check Filter State: ' + this.state.Filter);
+        this.log.debug("Check Filter State: " + this.state.Filter);
         return this.state.Filter;
     }
     async updateStates() {
-        const re = await this.caller.httpCall('GET', '', '', 1);
-        const response = (await re.json());
+        const re = await this.caller.httpCall("GET", "", "", 1);
+        const response = await re.json();
         if (response === undefined)
             return 1;
-        for (let i = 0; i < (Object.keys(response.content).length); i++) {
+        for (let i = 0; i < Object.keys(response.content).length; i++) {
             if (response.content[i].serialNumber === this.accessory.context.device.serialNumber) {
-                this.platform.log.info('Get Speed ->', response.content[i].fanspeed);
-                this.state.Speed = (response.content[i].fanspeed) * 20;
-                this.state.Filter = (response.content[i].pecoFilter);
-                if (response.content[i].online === 'false') {
-                    this.log.error(this.accessory.context.device.name + ' was reported to be offline by the Molekule API.');
+                this.platform.log.info("Get Speed ->", response.content[i].fanspeed);
+                this.state.Speed = response.content[i].fanspeed * 100 / this.maxSpeed;
+                this.state.Filter = response.content[i].pecoFilter;
+                if (response.content[i].online === "false") {
+                    this.log.error(this.accessory.context.device.name + " was reported to be offline by the Molekule API.");
                     return 1;
                 }
-                if (response.content[i].mode !== 'off') {
+                if (response.content[i].mode !== "off") {
                     this.state.On = 1;
                     this.state.state = 2;
                 }

@@ -28,10 +28,16 @@
       "threshold": {
           "title": "Filter Change Warning Percentage",
           "type": "integer",
-          "default": 5,
+          "default": 10,
           "minimum": 0,
           "maximum": 100,
           "description": "Show <b>Change Filter</b> warning once Filter Life reaches this value."
+      },
+      "excludeAirMiniPlus": {
+          "title": "Exclude Air Mini+",
+          "type": "boolean",
+          "default": false,
+          "description": "Exclude HomeKit enabled Air Mini+"
       }
     }
   }

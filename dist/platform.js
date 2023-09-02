@@ -68,7 +68,10 @@ class MolekuleHomebridgePlatform {
             // see if an accessory with the same uuid has already been registered and restored from
             // the cached devices we stored in the `configureAccessory` method above
             const existingAccessory = this.accessories.find(accessory => accessory.UUID === uuid);
-            if (existingAccessory) {
+            if (this.config.excludeAirMiniPlus && device.model === "Air Mini Pro") {
+                this.log.info('Excluding Air Mini+ device: ', device.name);
+            }
+            else if (existingAccessory) {
                 // the accessory already exists
                 this.log.info('Restoring existing accessory from cache:', existingAccessory.displayName);
                 // if you need to update the accessory.context then you should run `api.updatePlatformAccessories`. eg.:

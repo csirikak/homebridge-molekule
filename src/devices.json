@@ -2,7 +2,7 @@
     "models": {
         "Air Mini Pro": {
             "MaxFanSpeed": 5,
-            "AutoFunctionality": true,
+            "AutoFunctionality": false,
             "AirQualityMonitor": true
         },
         "Sequoia Basic": {

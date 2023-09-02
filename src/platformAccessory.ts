@@ -27,7 +27,8 @@ export class MolekulePlatformAccessory {
     private readonly platform: MolekuleHomebridgePlatform,
     private readonly accessory: PlatformAccessory,
     private readonly config: PlatformConfig,
-    private readonly log: Logger
+    private readonly log: Logger,
+    private readonly caller: HttpAJAX
   ) {
     // set accessory information
     this.accessory
@@ -63,6 +64,7 @@ export class MolekulePlatformAccessory {
     this.service.getCharacteristic(this.platform.Characteristic.FilterChangeIndication).onGet(this.getFilterChange.bind(this));
     this.service.getCharacteristic(this.platform.Characteristic.FilterLifeLevel).onGet(this.getFilterStatus.bind(this));
     if (this.accessory.context.device.capabilities.AirQualityMonitor) {
+      this.service = this.accessory.getService(this.platform.Service.AirQualitySensor) || this.accessory.addService(this.platform.Service.AirQualitySensor)
       this.service.getCharacteristic(this.platform.Characteristic.AirQuality).onGet(this.getAirQuality.bind(this));
     }
     /**
@@ -77,7 +79,6 @@ export class MolekulePlatformAccessory {
      */
   }
 
-  private caller = new HttpAJAX(this.log, this.config);
   /**
    * Handle "SET" requests from HomeKit
    * These are sent when the user changes the state of an accessory, for example, turning on a Light bulb.

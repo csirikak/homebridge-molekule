@@ -42,7 +42,7 @@ export class MolekuleHomebridgePlatform implements DynamicPlatformPlugin {
     public readonly log: Logger,
     public readonly config: PlatformConfig,
     public readonly api: API,
-    private caller = new HttpAJAX(log, config),
+    public readonly caller = new HttpAJAX(log, config),
   ) {
     // When this event is fired it means Homebridge has restored all cached accessories from disk.
     // Dynamic Platform plugins should only register new accessories after this event was fired,
@@ -104,7 +104,7 @@ export class MolekuleHomebridgePlatform implements DynamicPlatformPlugin {
 
         // create the accessory handler for the restored accessory
         // this is imported from `platformAccessory.ts`
-        new MolekulePlatformAccessory(this, existingAccessory, this.config, this.log)
+        new MolekulePlatformAccessory(this, existingAccessory, this.config, this.log, this.caller)
 
         // it is possible to remove platform accessories at any time using `api.unregisterPlatformAccessories`, eg.:
         // remove platform accessories when no longer present
@@ -124,7 +124,7 @@ export class MolekuleHomebridgePlatform implements DynamicPlatformPlugin {
         
         // create the accessory handler for the newly create accessory
         // this is imported from `platformAccessory.ts`
-        new MolekulePlatformAccessory(this, accessory, this.config, this.log)
+        new MolekulePlatformAccessory(this, accessory, this.config, this.log, this.caller);
 
         // link the accessory to your platform
         this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory])

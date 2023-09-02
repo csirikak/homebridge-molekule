@@ -1,19 +1,19 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MolekulePlatformAccessory = void 0;
-const cognito_1 = require("./cognito");
 /**
  * Platform Accessory
  * An instance of this class is created for each accessory your platform registers
  * Each accessory may expose multiple services of different service types.
  */
 class MolekulePlatformAccessory {
-    constructor(platform, accessory, config, log) {
+    constructor(platform, accessory, config, log, caller) {
         var _a;
         this.platform = platform;
         this.accessory = accessory;
         this.config = config;
         this.log = log;
+        this.caller = caller;
         /**
          * These are just used to create a working example
          * You should implement your own code to track the state of your accessory
@@ -27,7 +27,6 @@ class MolekulePlatformAccessory {
             auto: 0,
             airQuality: 0
         };
-        this.caller = new cognito_1.HttpAJAX(this.log, this.config);
         // set accessory information
         this.accessory
             .getService(this.platform.Service.AccessoryInformation)
@@ -59,6 +58,7 @@ class MolekulePlatformAccessory {
         this.service.getCharacteristic(this.platform.Characteristic.FilterChangeIndication).onGet(this.getFilterChange.bind(this));
         this.service.getCharacteristic(this.platform.Characteristic.FilterLifeLevel).onGet(this.getFilterStatus.bind(this));
         if (this.accessory.context.device.capabilities.AirQualityMonitor) {
+            this.service = this.accessory.getService(this.platform.Service.AirQualitySensor) || this.accessory.addService(this.platform.Service.AirQualitySensor);
             this.service.getCharacteristic(this.platform.Characteristic.AirQuality).onGet(this.getAirQuality.bind(this));
         }
         /**

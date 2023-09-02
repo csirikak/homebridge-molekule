@@ -76,7 +76,7 @@ class MolekuleHomebridgePlatform {
                 // this.api.updatePlatformAccessories([existingAccessory]);
                 // create the accessory handler for the restored accessory
                 // this is imported from `platformAccessory.ts`
-                new platformAccessory_1.MolekulePlatformAccessory(this, existingAccessory, this.config, this.log);
+                new platformAccessory_1.MolekulePlatformAccessory(this, existingAccessory, this.config, this.log, this.caller);
                 // it is possible to remove platform accessories at any time using `api.unregisterPlatformAccessories`, eg.:
                 // remove platform accessories when no longer present
                 // this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [existingAccessory]);
@@ -93,7 +93,7 @@ class MolekuleHomebridgePlatform {
                 accessory.context.device = device;
                 // create the accessory handler for the newly create accessory
                 // this is imported from `platformAccessory.ts`
-                new platformAccessory_1.MolekulePlatformAccessory(this, accessory, this.config, this.log);
+                new platformAccessory_1.MolekulePlatformAccessory(this, accessory, this.config, this.log, this.caller);
                 // link the accessory to your platform
                 this.api.registerPlatformAccessories(settings_1.PLUGIN_NAME, settings_1.PLATFORM_NAME, [accessory]);
             }

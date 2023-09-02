@@ -20,6 +20,7 @@ export class MolekulePlatformAccessory {
     Filter: 100,
     On: 0,
     auto: 0,
+    airQuality: 0
   };
 
   constructor(
@@ -61,6 +62,9 @@ export class MolekulePlatformAccessory {
 
     this.service.getCharacteristic(this.platform.Characteristic.FilterChangeIndication).onGet(this.getFilterChange.bind(this));
     this.service.getCharacteristic(this.platform.Characteristic.FilterLifeLevel).onGet(this.getFilterStatus.bind(this));
+    if (this.accessory.context.device.capabilities.AirQualityMonitor) {
+      this.service.getCharacteristic(this.platform.Characteristic.AirQuality).onGet(this.getAirQuality.bind(this));
+    }
     /**
      * Creating multiple services of the same type.
      *
@@ -78,6 +82,9 @@ export class MolekulePlatformAccessory {
    * Handle "SET" requests from HomeKit
    * These are sent when the user changes the state of an accessory, for example, turning on a Light bulb.
    */
+  async getAirQuality() {
+    return this.state.airQuality;
+  }
   async handleActiveSet(value: CharacteristicValue) {
     // implement your own code to turn your device on/off
     let data = '"on"}';
@@ -180,6 +187,10 @@ export class MolekulePlatformAccessory {
         this.state.Speed = response.content[i].fanspeed * 100/this.maxSpeed;
         this.state.Filter = response.content[i].pecoFilter;
         this.state.auto = +!!(response.content[i].mode === "smart") //+!! cast boolean to number
+        /*
+        this.state.airQuality = response.content[i].aqi
+        TODO: Find out how AQI values are delivered in API.
+        */
         if (response.content[i].online === "false") {
           this.log.error(this.accessory.context.device.name + " was reported to be offline by the Molekule API.");
           return 1;

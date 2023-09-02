@@ -25,6 +25,7 @@ class MolekulePlatformAccessory {
             Filter: 100,
             On: 0,
             auto: 0,
+            airQuality: 0
         };
         this.caller = new cognito_1.HttpAJAX(this.log, this.config);
         // set accessory information
@@ -57,6 +58,9 @@ class MolekulePlatformAccessory {
         this.service.getCharacteristic(this.platform.Characteristic.RotationSpeed).onSet(this.setSpeed.bind(this)).onGet(this.getSpeed.bind(this));
         this.service.getCharacteristic(this.platform.Characteristic.FilterChangeIndication).onGet(this.getFilterChange.bind(this));
         this.service.getCharacteristic(this.platform.Characteristic.FilterLifeLevel).onGet(this.getFilterStatus.bind(this));
+        if (this.accessory.context.device.capabilities.AirQualityMonitor) {
+            this.service.getCharacteristic(this.platform.Characteristic.AirQuality).onGet(this.getAirQuality.bind(this));
+        }
         /**
          * Creating multiple services of the same type.
          *
@@ -72,6 +76,9 @@ class MolekulePlatformAccessory {
      * Handle "SET" requests from HomeKit
      * These are sent when the user changes the state of an accessory, for example, turning on a Light bulb.
      */
+    async getAirQuality() {
+        return this.state.airQuality;
+    }
     async handleActiveSet(value) {
         // implement your own code to turn your device on/off
         let data = '"on"}';
@@ -167,6 +174,10 @@ class MolekulePlatformAccessory {
                 this.state.Speed = response.content[i].fanspeed * 100 / this.maxSpeed;
                 this.state.Filter = response.content[i].pecoFilter;
                 this.state.auto = +!!(response.content[i].mode === "smart"); //+!! cast boolean to number
+                /*
+                this.state.airQuality = response.content[i].aqi
+                TODO: Find out how AQI values are delivered in API.
+                */
                 if (response.content[i].online === "false") {
                     this.log.error(this.accessory.context.device.name + " was reported to be offline by the Molekule API.");
                     return 1;

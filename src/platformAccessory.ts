@@ -13,12 +13,13 @@ export class MolekulePlatformAccessory {
    * These are just used to create a working example
    * You should implement your own code to track the state of your accessory
    */
-  private maxSpeed = this.accessory.context.device.capabilities.MaxFanSpeed ?? 6
+  private maxSpeed = this.accessory.context.device.capabilities.MaxFanSpeed ?? 6 //defaults to max speed of 6 if device not in JSON
   private state = {
     state: 0, //https://developers.homebridge.io/#/characteristic/CurrentAirPurifierState
     Speed: 0,
     Filter: 100,
     On: 0,
+    auto: 0,
   };
 
   constructor(
@@ -137,7 +138,7 @@ export class MolekulePlatformAccessory {
   }
 
   async handleAutoGet() {
-    return 0;
+    return this.state.auto;
   }
 
   /**
@@ -178,6 +179,7 @@ export class MolekulePlatformAccessory {
         this.platform.log.info("Get Speed ->", response.content[i].fanspeed);
         this.state.Speed = response.content[i].fanspeed * 100/this.maxSpeed;
         this.state.Filter = response.content[i].pecoFilter;
+        this.state.auto = +!!(response.content[i].mode === "smart") //+!! cast boolean to number
         if (response.content[i].online === "false") {
           this.log.error(this.accessory.context.device.name + " was reported to be offline by the Molekule API.");
           return 1;

@@ -21,16 +21,12 @@ interface deviceData {
   online: string;
   aqi: string;
   silent: string;
-  capabilities: {
-    MaxFanSpeed: number
-    AutoFunctionality: number
-    AirQualityMonitor: boolean
-  }
+  capabilities: capabilities
 }
 interface capabilities {
   MaxFanSpeed: number;
   AutoFunctionality: number;
-  AirQualityMonitor: boolean;
+  AirQualityMonitor: number;
 }
 
 interface JsonData {
@@ -54,7 +50,7 @@ export class MolekuleHomebridgePlatform implements DynamicPlatformPlugin {
     public readonly log: Logger,
     public readonly config: PlatformConfig,
     public readonly api: API,
-    public readonly caller = new HttpAJAX(log, config)
+    public readonly requester = new HttpAJAX(log, config)
   ) {
     // When this event is fired it means Homebridge has restored all cached accessories from disk.
     // Dynamic Platform plugins should only register new accessories after this event was fired,
@@ -64,7 +60,7 @@ export class MolekuleHomebridgePlatform implements DynamicPlatformPlugin {
       log.debug('Executed didFinishLaunching callback')
       // run the method to discover / register your devices as accessories
       this.discoverDevices()
-      if (!intervalID) intervalID = setInterval(() => this.caller.refreshAuthToken(), refreshInterval*60*1000)
+      if (!intervalID) intervalID = setInterval(() => this.requester.refreshIdToken(), refreshInterval*60*1000)
     })
     this.log.debug('Finished initializing platform ', PLATFORM_NAME)
   }
@@ -88,7 +84,7 @@ export class MolekuleHomebridgePlatform implements DynamicPlatformPlugin {
    */
   async discoverDevices () {
     this.log.debug('Discover Devices Called')
-    const response = this.caller.httpCall('GET', '', '', 1);
+    const response = this.requester.httpCall('GET', '', '', 1);
     const res = await (await response).json();
     // loop over the discovered devices and register each one if it has not already been registered
     if ((await response).status !== 200) 
@@ -119,7 +115,9 @@ export class MolekuleHomebridgePlatform implements DynamicPlatformPlugin {
 
         // create the accessory handler for the restored accessory
         // this is imported from `platformAccessory.ts`
-        new MolekulePlatformAccessory(this, existingAccessory, this.config, this.log, this.caller)
+        existingAccessory.context.device.capabilities = Models[device.model]
+        this.api.updatePlatformAccessories([existingAccessory]);
+        new MolekulePlatformAccessory(this, existingAccessory, this.config, this.log, this.requester)
 
         // it is possible to remove platform accessories at any time using `api.unregisterPlatformAccessories`, eg.:
         // remove platform accessories when no longer present
@@ -139,7 +137,7 @@ export class MolekuleHomebridgePlatform implements DynamicPlatformPlugin {
         
         // create the accessory handler for the newly create accessory
         // this is imported from `platformAccessory.ts`
-        new MolekulePlatformAccessory(this, accessory, this.config, this.log, this.caller);
+        new MolekulePlatformAccessory(this, accessory, this.config, this.log, this.requester);
 
         // link the accessory to your platform
         this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory])

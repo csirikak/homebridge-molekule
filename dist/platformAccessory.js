@@ -1,19 +1,20 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MolekulePlatformAccessory = void 0;
+const aqi_1 = require("./aqi");
 /**
  * Platform Accessory
  * An instance of this class is created for each accessory your platform registers
  * Each accessory may expose multiple services of different service types.
  */
 class MolekulePlatformAccessory {
-    constructor(platform, accessory, config, log, caller) {
+    constructor(platform, accessory, config, log, requester) {
         var _a;
         this.platform = platform;
         this.accessory = accessory;
         this.config = config;
         this.log = log;
-        this.caller = caller;
+        this.requester = requester;
         /**
          * These are just used to create a working example
          * You should implement your own code to track the state of your accessory
@@ -27,6 +28,7 @@ class MolekulePlatformAccessory {
             auto: 0,
             airQuality: 0
         };
+        this.aqiClass = new aqi_1.aqiReport(this.log, this.requester);
         // set accessory information
         this.accessory
             .getService(this.platform.Service.AccessoryInformation)
@@ -59,8 +61,18 @@ class MolekulePlatformAccessory {
         this.service.getCharacteristic(this.platform.Characteristic.RotationSpeed).onSet(this.setSpeed.bind(this)).onGet(this.getSpeed.bind(this));
         this.service.getCharacteristic(this.platform.Characteristic.FilterChangeIndication).onGet(this.getFilterChange.bind(this));
         this.service.getCharacteristic(this.platform.Characteristic.FilterLifeLevel).onGet(this.getFilterStatus.bind(this));
-        if (this.accessory.context.device.capabilities.AirQualityMonitor) {
-            this.service.getCharacteristic(this.platform.Characteristic.AirQuality).onGet(this.getAirQuality.bind(this));
+        switch (this.accessory.context.device.capabilities.AirQualityMonitor) {
+            case 1:
+                this.service.getCharacteristic(this.platform.Characteristic.AirQuality).onGet(this.getAirQuality.bind(this));
+                ;
+                this.service.getCharacteristic(this.platform.Characteristic.PM2_5Density);
+                this.service.getCharacteristic(this.platform.Characteristic.PM10Density);
+                this.service.getCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity);
+                this.service.getCharacteristic(this.platform.Characteristic.CarbonDioxideLevel);
+                this.service.getCharacteristic(this.platform.Characteristic.VOCDensity);
+            case 2:
+                this.service.getCharacteristic(this.platform.Characteristic.AirQuality).onGet(this.getAirQuality.bind(this));
+                this.service.getCharacteristic(this.platform.Characteristic.PM2_5Density);
         }
         /**
          * Creating multiple services of the same type.
@@ -77,7 +89,21 @@ class MolekulePlatformAccessory {
      * Handle "SET" requests from HomeKit
      * These are sent when the user changes the state of an accessory, for example, turning on a Light bulb.
      */
+    async updateAirQuality() {
+        const AQIstats = await this.aqiClass.getAqi(this.accessory.context.device.serialNumber);
+        switch (this.accessory.context.device.capabilities.AirQualityMonitor) {
+            case 1:
+                this.service.updateCharacteristic(this.platform.Characteristic.PM2_5Density, AQIstats["PM2_5"]);
+                this.service.updateCharacteristic(this.platform.Characteristic.PM10Density, AQIstats["PM10"]);
+                this.service.updateCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity, AQIstats["RH"]);
+                this.service.updateCharacteristic(this.platform.Characteristic.CarbonDioxideLevel, AQIstats["CO2"]);
+                this.service.updateCharacteristic(this.platform.Characteristic.VOCDensity, AQIstats["TVOC"]);
+            case 2:
+                this.service.updateCharacteristic(this.platform.Characteristic.PM2_5Density, AQIstats["PM2_5"]);
+        }
+    }
     async getAirQuality() {
+        this.updateAirQuality();
         return this.state.airQuality;
     }
     async handleActiveSet(value) {
@@ -85,7 +111,7 @@ class MolekulePlatformAccessory {
         let data = '"on"}';
         if (!value)
             data = '"off"}';
-        const response = await this.caller.httpCall("POST", this.accessory.context.device.serialNumber + "/actions/set-power-status", '{"status":' + data, 1);
+        const response = await this.requester.httpCall("POST", this.accessory.context.device.serialNumber + "/actions/set-power-status", '{"status":' + data, 1);
         if (response.status === 204) {
             this.platform.log.info("Attempted to set: " + value + " state on device: " + this.accessory.context.device.name + " Server Reply: " + JSON.stringify(response));
             this.service.updateCharacteristic(this.platform.Characteristic.Active, value);
@@ -125,22 +151,23 @@ class MolekulePlatformAccessory {
         return this.state.state;
     }
     async handleAutoSet(value) {
+        var _a;
         let responseCode;
         const clamp = Math.round(Math.min(Math.max((this.state.Speed) / (100 / this.maxSpeed), 1), this.maxSpeed));
         switch (this.accessory.context.device.capabilities.AutoFunctionality) {
             case 1:
                 if (value === 1)
-                    responseCode = (await this.caller.httpCall("POST", this.accessory.context.device.serialNumber + "/actions/enable-smart-mode", "", 1)).status;
+                    responseCode = (await this.requester.httpCall("POST", this.accessory.context.device.serialNumber + "/actions/enable-smart-mode", "", 1)).status;
                 else {
-                    responseCode = (await this.caller.httpCall("POST", this.accessory.context.device.serialNumber + "/actions/set-fan-speed", '{"fanSpeed": ' + clamp + "}", 1)).status;
+                    responseCode = (await this.requester.httpCall("POST", this.accessory.context.device.serialNumber + "/actions/set-fan-speed", '{"fanSpeed": ' + clamp + "}", 1)).status;
                     this.service.updateCharacteristic(this.platform.Characteristic.RotationSpeed, this.state.Speed);
                 }
                 break;
             case 2:
                 if (value === 1)
-                    responseCode = (await this.caller.httpCall("POST", this.accessory.context.device.serialNumber + "/actions/enable-smart-mode", '{"silent": "' + this.config.silentAuto + '"}', 1)).status;
+                    responseCode = (await this.requester.httpCall("POST", this.accessory.context.device.serialNumber + "/actions/enable-smart-mode", '{"silent": "' + ((_a = this.config.silentAuto) !== null && _a !== void 0 ? _a : 0) + '"}', 1)).status;
                 else {
-                    responseCode = (await this.caller.httpCall("POST", this.accessory.context.device.serialNumber + "/actions/set-fan-speed", '{"fanSpeed": ' + clamp + "}", 1)).status;
+                    responseCode = (await this.requester.httpCall("POST", this.accessory.context.device.serialNumber + "/actions/set-fan-speed", '{"fanSpeed": ' + clamp + "}", 1)).status;
                     this.service.updateCharacteristic(this.platform.Characteristic.RotationSpeed, this.state.Speed);
                 }
                 break;
@@ -169,7 +196,7 @@ class MolekulePlatformAccessory {
      */
     async setSpeed(value) {
         const clamp = Math.round(Math.min(Math.max(value / (100 / this.maxSpeed), 1), this.maxSpeed));
-        if ((await this.caller.httpCall("POST", this.accessory.context.device.serialNumber + "/actions/set-fan-speed", '{"fanSpeed": ' + clamp + "}", 1)).status ===
+        if ((await this.requester.httpCall("POST", this.accessory.context.device.serialNumber + "/actions/set-fan-speed", '{"fanSpeed": ' + clamp + "}", 1)).status ===
             204)
             this.state.Speed = clamp * 100 / this.maxSpeed;
         this.platform.log.info(this.accessory.context.device.name + " set speed -> ", '{"fanSpeed":' + clamp + "}");
@@ -192,9 +219,7 @@ class MolekulePlatformAccessory {
     }
     async updateStates() {
         if (MolekulePlatformAccessory.query.change || ((Date.now() - MolekulePlatformAccessory.query.requestTime) > 5000)) {
-            const re = await this.caller.httpCall("GET", "", "", 1);
-            this.platform.log.info(((Date.now() - MolekulePlatformAccessory.query.requestTime) > 5000), MolekulePlatformAccessory.query.change);
-            this.platform.log.debug((Date.now() - MolekulePlatformAccessory.query.requestTime));
+            const re = await this.requester.httpCall("GET", "", "", 1);
             MolekulePlatformAccessory.query = await re.json();
             MolekulePlatformAccessory.query.requestTime = Date.now();
             MolekulePlatformAccessory.query.change = false;

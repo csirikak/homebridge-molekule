@@ -4,10 +4,21 @@ import { MolekulePlatformAccessory } from './platformAccessory'
 import { HttpAJAX } from './cognito'
 import { models } from "./devices.json"
 
+export interface queryResponse {
+  content: deviceData[];
+  requestTime: number;
+}
 interface deviceData {
-  name: string
-  model: string
-  serialNumber: string
+  name: string;
+  model: string;
+  serialNumber: string;
+  auto: string;
+  pecoFilter: string;
+  fanspeed: string;
+  mode: string;
+  online: string;
+  aqi: string;
+  silent: string;
   capabilities: {
     MaxFanSpeed: number
     AutoFunctionality: number
@@ -77,14 +88,15 @@ export class MolekuleHomebridgePlatform implements DynamicPlatformPlugin {
   async discoverDevices () {
     this.log.debug('Discover Devices Called')
     const response = this.caller.httpCall('GET', '', '', 1);
-    const devices = await (await response).json();
+    let devicesQuery: queryResponse
+    devicesQuery = await (await response).json();
     // loop over the discovered devices and register each one if it has not already been registered
     if ((await response).status !== 200) 
     {
       this.log.error('Fatal error, discover devices failed. Try running homebridge in debug mode to see HTTP status code.')
       return; //prevent crashes
     }
-    devices.content.forEach((device : deviceData) => {
+    devicesQuery.content.forEach((device : deviceData) => {
       // generate a unique id for the accessory this should be generated from
       // something globally unique, but constant, for example, the device serial
       // number or MAC address
@@ -107,7 +119,7 @@ export class MolekuleHomebridgePlatform implements DynamicPlatformPlugin {
 
         // create the accessory handler for the restored accessory
         // this is imported from `platformAccessory.ts`
-        new MolekulePlatformAccessory(this, existingAccessory, this.config, this.log, this.caller)
+        new MolekulePlatformAccessory(this, existingAccessory, this.config, this.log, this.caller, devicesQuery)
 
         // it is possible to remove platform accessories at any time using `api.unregisterPlatformAccessories`, eg.:
         // remove platform accessories when no longer present
@@ -127,7 +139,7 @@ export class MolekuleHomebridgePlatform implements DynamicPlatformPlugin {
         
         // create the accessory handler for the newly create accessory
         // this is imported from `platformAccessory.ts`
-        new MolekulePlatformAccessory(this, accessory, this.config, this.log, this.caller);
+        new MolekulePlatformAccessory(this, accessory, this.config, this.log, this.caller, devicesQuery);
 
         // link the accessory to your platform
         this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory])

@@ -88,7 +88,7 @@ export class HttpAJAX {
       }
       response = await fetch(url + extraUrl, contents)
       this.log.debug('HTTP GET STATUS: ' + response.status)
-      this.log.debug('HTTP GET CONTENTS: ' + JSON.stringify(response))
+      //this.log.debug('HTTP GET CONTENTS: ' + JSON.stringify(response))
       if (response.status === 401 && retry > 0) {
         authError = true
         return await this.httpCall(method, extraUrl, send, retry - 1)

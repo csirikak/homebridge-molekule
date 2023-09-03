@@ -1,8 +1,9 @@
 # homebridge-molekule
-A Homebridge Plugin for Molekule Air Purifiers. Tested on the Air Mini. Once you install this plugin you can say:
+A Homebridge Plugin for Molekule Air Purifiers. Once you install this plugin you can say:
 ```
 Hey Siri, what's the status of the Air Purifier Filter?
 Hey Siri, set the speed of the Molekule to 60%.
+Hey Siri, what's the air quality in the Living Room?
 ```
 ## Installation
 Search for Molekule under Plugins in the Homebridge UI.
@@ -18,7 +19,9 @@ It should be configurable in plugin settings using homebridge-ui-x, if not, add 
   "name": "homebridge-molekule",
   "email": "YOUR EMAIL HERE",
   "password": "YOUR PASSWORD HERE",
-  "threshold": 10
+  "threshold": 10,
+  "excludeAirMiniPlus": false,    // Exclude Air Mini+ because of existing HomeKit compatibility? 
+  "silentAuto": false             // When setting Auto/Manual state, use Silent or Normal auto state on Air Pro devices?
 }
 ```
 # Notes and Issues

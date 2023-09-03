@@ -7,13 +7,14 @@ exports.MolekulePlatformAccessory = void 0;
  * Each accessory may expose multiple services of different service types.
  */
 class MolekulePlatformAccessory {
-    constructor(platform, accessory, config, log, caller) {
+    constructor(platform, accessory, config, log, caller, deviceQuery) {
         var _a;
         this.platform = platform;
         this.accessory = accessory;
         this.config = config;
         this.log = log;
         this.caller = caller;
+        this.deviceQuery = deviceQuery;
         /**
          * These are just used to create a working example
          * You should implement your own code to track the state of your accessory
@@ -114,9 +115,8 @@ class MolekulePlatformAccessory {
      * this.service.updateCharacteristic(this.platform.Characteristic.On, true)
      */
     async handleActiveGet() {
-        if ((await this.updateStates()) === 1)
-            throw new this.platform.api.hap.HapStatusError(-70402 /* this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE */);
-        this.log.info(this.accessory.context.device.name + " state is: " + this.state.On);
+        this.updateStates();
+        this.platform.log.debug(this.accessory.context.device.name + " state is: " + this.state.On);
         return this.state.On;
         // if you need to return an error to show the device as "Not Responding" in the Home app:
         // throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
@@ -128,10 +128,6 @@ class MolekulePlatformAccessory {
         let responseCode;
         const clamp = Math.round(Math.min(Math.max((this.state.Speed) / (100 / this.maxSpeed), 1), this.maxSpeed));
         switch (this.accessory.context.device.capabilities.AutoFunctionality) {
-            default:
-                this.log.info("Homekit attempted to set auto/manual (" + value + ") state but your device doesn't support it ☹");
-                this.service.updateCharacteristic(this.platform.Characteristic.TargetAirPurifierState, 0);
-                break;
             case 1:
                 if (value === 1)
                     responseCode = (await this.caller.httpCall("POST", this.accessory.context.device.serialNumber + "/actions/enable-smart-mode", "", 1)).status;
@@ -148,11 +144,15 @@ class MolekulePlatformAccessory {
                     this.service.updateCharacteristic(this.platform.Characteristic.RotationSpeed, this.state.Speed);
                 }
                 break;
+            default:
+                this.log.error("Homekit attempted to set auto/manual (" + value + ") state but your device doesn't support it ☹");
+                this.service.updateCharacteristic(this.platform.Characteristic.TargetAirPurifierState, 0);
+                break;
         }
         if (responseCode === 204) {
-            this.service.updateCharacteristic(this.platform.Characteristic.TargetAirPurifierState, value);
-            this.log.info(this.accessory.context.device.name, "set", value ? "auto" : "manual", "state.");
             this.state.auto = value;
+            this.service.updateCharacteristic(this.platform.Characteristic.TargetAirPurifierState, this.state.auto);
+            this.platform.log.info(this.accessory.context.device.name, "set", value ? "auto" : "manual", "state.");
         }
         else {
             this.log.error(this.accessory.context.device.name, "failed to set auto/manual state");
@@ -185,21 +185,25 @@ class MolekulePlatformAccessory {
             return 1;
     }
     async getFilterStatus() {
-        this.log.debug("Check Filter State: " + this.state.Filter);
+        this.platform.log.debug(this.accessory.context.device.name, "Filter State:", this.state.Filter);
         return this.state.Filter;
     }
     async updateStates() {
-        const re = await this.caller.httpCall("GET", "", "", 1);
-        const response = await re.json();
-        if (response === undefined)
-            return 1;
-        for (let i = 0; i < Object.keys(response.content).length; i++) {
-            if (response.content[i].serialNumber === this.accessory.context.device.serialNumber) {
-                this.platform.log.info(this.accessory.context.device.name, "speed is:", response.content[i].fanspeed);
-                this.state.Speed = response.content[i].fanspeed * 100 / this.maxSpeed;
-                this.state.Filter = response.content[i].pecoFilter;
-                this.state.auto = +!!(response.content[i].mode === "smart"); //+!! cast boolean to number
-                switch (response.content[i].aqi) {
+        if (Date.now() - this.deviceQuery.requestTime >= 1000) {
+            const re = await this.caller.httpCall("GET", "", "", 1);
+            this.deviceQuery = await re.json();
+            this.deviceQuery.requestTime = Date.now();
+        }
+        if (this.deviceQuery === undefined)
+            throw new this.platform.api.hap.HapStatusError(-70402 /* this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE */);
+        for (let i = 0; i < Object.keys(this.deviceQuery.content).length; i++) {
+            if (this.deviceQuery.content[i].serialNumber === this.accessory.context.device.serialNumber) {
+                this.platform.log.debug(this.accessory.context.device.name, "speed is:", this.deviceQuery.content[i].fanspeed);
+                this.state.Speed = this.deviceQuery.content[i].fanspeed * 100 / this.maxSpeed;
+                this.state.Filter = this.deviceQuery.content[i].pecoFilter;
+                this.state.auto = +!!(this.deviceQuery.content[i].mode === "smart"); //+!! cast boolean to number
+                this.platform.log.debug(this.accessory.context.device.name, "auto/manual:", this.state.auto ? "auto" : "manual");
+                switch (this.deviceQuery.content[i].aqi) {
                     case "good":
                         this.state.airQuality = 1;
                         break;
@@ -216,11 +220,11 @@ class MolekulePlatformAccessory {
                         this.state.airQuality = 0;
                         break;
                 }
-                if (response.content[i].online === "false") {
-                    this.log.error(this.accessory.context.device.name + " was reported to be offline by the Molekule API.");
-                    return 1;
+                if (this.deviceQuery.content[i].online === "false") {
+                    this.platform.log.error(this.accessory.context.device.name + " was reported to be offline by the Molekule API.");
+                    throw new this.platform.api.hap.HapStatusError(-70402 /* this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE */);
                 }
-                if (response.content[i].mode !== "off") {
+                if (this.deviceQuery.content[i].mode !== "off") {
                     this.state.On = 1;
                     this.state.state = 2;
                 }
@@ -233,6 +237,8 @@ class MolekulePlatformAccessory {
         this.service.updateCharacteristic(this.platform.Characteristic.RotationSpeed, this.state.Speed);
         this.service.updateCharacteristic(this.platform.Characteristic.CurrentAirPurifierState, this.state.state);
         this.service.updateCharacteristic(this.platform.Characteristic.Active, this.state.On);
+        if (this.accessory.context.device.AutoFunctionality != 0)
+            this.service.updateCharacteristic(this.platform.Characteristic.TargetAirPurifierState, this.state.auto);
         return 0;
     }
 }

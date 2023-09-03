@@ -53,14 +53,13 @@ class MolekuleHomebridgePlatform {
     async discoverDevices() {
         this.log.debug('Discover Devices Called');
         const response = this.caller.httpCall('GET', '', '', 1);
-        let devicesQuery;
-        devicesQuery = await (await response).json();
+        const res = await (await response).json();
         // loop over the discovered devices and register each one if it has not already been registered
         if ((await response).status !== 200) {
             this.log.error('Fatal error, discover devices failed. Try running homebridge in debug mode to see HTTP status code.');
             return; //prevent crashes
         }
-        devicesQuery.content.forEach((device) => {
+        res.content.forEach((device) => {
             // generate a unique id for the accessory this should be generated from
             // something globally unique, but constant, for example, the device serial
             // number or MAC address
@@ -80,7 +79,7 @@ class MolekuleHomebridgePlatform {
                 // this.api.updatePlatformAccessories([existingAccessory]);
                 // create the accessory handler for the restored accessory
                 // this is imported from `platformAccessory.ts`
-                new platformAccessory_1.MolekulePlatformAccessory(this, existingAccessory, this.config, this.log, this.caller, devicesQuery);
+                new platformAccessory_1.MolekulePlatformAccessory(this, existingAccessory, this.config, this.log, this.caller);
                 // it is possible to remove platform accessories at any time using `api.unregisterPlatformAccessories`, eg.:
                 // remove platform accessories when no longer present
                 // this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [existingAccessory]);
@@ -97,7 +96,7 @@ class MolekuleHomebridgePlatform {
                 accessory.context.device = device;
                 // create the accessory handler for the newly create accessory
                 // this is imported from `platformAccessory.ts`
-                new platformAccessory_1.MolekulePlatformAccessory(this, accessory, this.config, this.log, this.caller, devicesQuery);
+                new platformAccessory_1.MolekulePlatformAccessory(this, accessory, this.config, this.log, this.caller);
                 // link the accessory to your platform
                 this.api.registerPlatformAccessories(settings_1.PLUGIN_NAME, settings_1.PLATFORM_NAME, [accessory]);
             }

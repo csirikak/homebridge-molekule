@@ -7,14 +7,13 @@ exports.MolekulePlatformAccessory = void 0;
  * Each accessory may expose multiple services of different service types.
  */
 class MolekulePlatformAccessory {
-    constructor(platform, accessory, config, log, caller, deviceQuery) {
+    constructor(platform, accessory, config, log, caller) {
         var _a;
         this.platform = platform;
         this.accessory = accessory;
         this.config = config;
         this.log = log;
         this.caller = caller;
-        this.deviceQuery = deviceQuery;
         /**
          * These are just used to create a working example
          * You should implement your own code to track the state of your accessory
@@ -100,6 +99,7 @@ class MolekulePlatformAccessory {
                 this.state.On = 0;
             }
         }
+        MolekulePlatformAccessory.query.change = true;
         this.updateStates();
     }
     /**
@@ -153,6 +153,7 @@ class MolekulePlatformAccessory {
             this.state.auto = value;
             this.service.updateCharacteristic(this.platform.Characteristic.TargetAirPurifierState, this.state.auto);
             this.platform.log.info(this.accessory.context.device.name, "set", value ? "auto" : "manual", "state.");
+            MolekulePlatformAccessory.query.change = true;
         }
         else {
             this.log.error(this.accessory.context.device.name, "failed to set auto/manual state");
@@ -173,6 +174,7 @@ class MolekulePlatformAccessory {
             this.state.Speed = clamp * 100 / this.maxSpeed;
         this.platform.log.info(this.accessory.context.device.name + " set speed -> ", '{"fanSpeed":' + clamp + "}");
         this.service.updateCharacteristic(this.platform.Characteristic.RotationSpeed, this.state.Speed);
+        MolekulePlatformAccessory.query.change = true;
         this.updateStates();
     }
     async getSpeed() {
@@ -189,21 +191,26 @@ class MolekulePlatformAccessory {
         return this.state.Filter;
     }
     async updateStates() {
-        if (Date.now() - this.deviceQuery.requestTime >= 1000) {
+        if (MolekulePlatformAccessory.query.change || ((Date.now() - MolekulePlatformAccessory.query.requestTime) > 5000)) {
             const re = await this.caller.httpCall("GET", "", "", 1);
-            this.deviceQuery = await re.json();
-            this.deviceQuery.requestTime = Date.now();
+            this.platform.log.info(((Date.now() - MolekulePlatformAccessory.query.requestTime) > 5000), MolekulePlatformAccessory.query.change);
+            this.platform.log.debug((Date.now() - MolekulePlatformAccessory.query.requestTime));
+            MolekulePlatformAccessory.query = await re.json();
+            MolekulePlatformAccessory.query.requestTime = Date.now();
+            MolekulePlatformAccessory.query.change = false;
         }
-        if (this.deviceQuery === undefined)
+        else
+            this.platform.log.debug("saved a request");
+        if (MolekulePlatformAccessory.query.content === undefined)
             throw new this.platform.api.hap.HapStatusError(-70402 /* this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE */);
-        for (let i = 0; i < Object.keys(this.deviceQuery.content).length; i++) {
-            if (this.deviceQuery.content[i].serialNumber === this.accessory.context.device.serialNumber) {
-                this.platform.log.debug(this.accessory.context.device.name, "speed is:", this.deviceQuery.content[i].fanspeed);
-                this.state.Speed = this.deviceQuery.content[i].fanspeed * 100 / this.maxSpeed;
-                this.state.Filter = this.deviceQuery.content[i].pecoFilter;
-                this.state.auto = +!!(this.deviceQuery.content[i].mode === "smart"); //+!! cast boolean to number
+        for (let i = 0; i < Object.keys(MolekulePlatformAccessory.query.content).length; i++) {
+            if (MolekulePlatformAccessory.query.content[i].serialNumber === this.accessory.context.device.serialNumber) {
+                this.platform.log.debug(this.accessory.context.device.name, "speed is:", MolekulePlatformAccessory.query.content[i].fanspeed);
+                this.state.Speed = MolekulePlatformAccessory.query.content[i].fanspeed * 100 / this.maxSpeed;
+                this.state.Filter = MolekulePlatformAccessory.query.content[i].pecoFilter;
+                this.state.auto = +!!(MolekulePlatformAccessory.query.content[i].mode === "smart"); //+!! cast boolean to number
                 this.platform.log.debug(this.accessory.context.device.name, "auto/manual:", this.state.auto ? "auto" : "manual");
-                switch (this.deviceQuery.content[i].aqi) {
+                switch (MolekulePlatformAccessory.query.content[i].aqi) {
                     case "good":
                         this.state.airQuality = 1;
                         break;
@@ -220,11 +227,11 @@ class MolekulePlatformAccessory {
                         this.state.airQuality = 0;
                         break;
                 }
-                if (this.deviceQuery.content[i].online === "false") {
+                if (MolekulePlatformAccessory.query.content[i].online === "false") {
                     this.platform.log.error(this.accessory.context.device.name + " was reported to be offline by the Molekule API.");
                     throw new this.platform.api.hap.HapStatusError(-70402 /* this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE */);
                 }
-                if (this.deviceQuery.content[i].mode !== "off") {
+                if (MolekulePlatformAccessory.query.content[i].mode !== "off") {
                     this.state.On = 1;
                     this.state.state = 2;
                 }
@@ -243,4 +250,9 @@ class MolekulePlatformAccessory {
     }
 }
 exports.MolekulePlatformAccessory = MolekulePlatformAccessory;
+MolekulePlatformAccessory.query = {
+    content: [],
+    requestTime: 0,
+    change: false
+};
 //# sourceMappingURL=platformAccessory.js.map

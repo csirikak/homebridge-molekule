@@ -2,6 +2,7 @@ import { Service, PlatformAccessory, CharacteristicValue, Logger, PlatformConfig
 import { HttpAJAX } from "./cognito";
 import { MolekuleHomebridgePlatform, queryResponse } from "./platform";
 
+
 /**
  * Platform Accessory
  * An instance of this class is created for each accessory your platform registers
@@ -9,6 +10,11 @@ import { MolekuleHomebridgePlatform, queryResponse } from "./platform";
  */
 export class MolekulePlatformAccessory {
   private service: Service;
+  static query: queryResponse = {
+    content: [],
+    requestTime: 0,
+    change: false
+  }
   /**
    * These are just used to create a working example
    * You should implement your own code to track the state of your accessory
@@ -29,7 +35,6 @@ export class MolekulePlatformAccessory {
     private readonly config: PlatformConfig,
     private readonly log: Logger,
     private readonly caller: HttpAJAX,
-    private deviceQuery: queryResponse,
   ) {
     // set accessory information
     this.accessory
@@ -106,6 +111,7 @@ export class MolekulePlatformAccessory {
         this.state.On = 0;
       }
     }
+    MolekulePlatformAccessory.query.change = true;
     this.updateStates();
   }
 
@@ -160,6 +166,7 @@ export class MolekulePlatformAccessory {
       this.state.auto = value as number;
       this.service.updateCharacteristic(this.platform.Characteristic.TargetAirPurifierState, this.state.auto);
       this.platform.log.info(this.accessory.context.device.name, "set", value? "auto" : "manual", "state.");
+      MolekulePlatformAccessory.query.change = true;
     }
     else {
       this.log.error(this.accessory.context.device.name, "failed to set auto/manual state");
@@ -184,6 +191,7 @@ export class MolekulePlatformAccessory {
       this.state.Speed = clamp * 100/this.maxSpeed;
     this.platform.log.info(this.accessory.context.device.name + " set speed -> ", '{"fanSpeed":' + clamp + "}");
     this.service.updateCharacteristic(this.platform.Characteristic.RotationSpeed, this.state.Speed);
+    MolekulePlatformAccessory.query.change = true;
     this.updateStates();
   }
 
@@ -202,20 +210,24 @@ export class MolekulePlatformAccessory {
   }
 
   async updateStates() {
-    if (Date.now() - this.deviceQuery.requestTime >= 1000){
+    if (MolekulePlatformAccessory.query.change || ((Date.now() - MolekulePlatformAccessory.query.requestTime) > 5000)){
       const re = await this.caller.httpCall("GET", "", "", 1);
-      this.deviceQuery = await re.json();
-      this.deviceQuery.requestTime = Date.now();
+      this.platform.log.info(((Date.now() - MolekulePlatformAccessory.query.requestTime) > 5000) as unknown as string, MolekulePlatformAccessory.query.change)
+      this.platform.log.debug((Date.now() - MolekulePlatformAccessory.query.requestTime) as unknown as string)
+      MolekulePlatformAccessory.query = await re.json();
+      MolekulePlatformAccessory.query.requestTime = Date.now();
+      MolekulePlatformAccessory.query.change = false;
     }
-    if (this.deviceQuery === undefined) throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
-    for (let i = 0; i < Object.keys(this.deviceQuery.content).length; i++) {
-      if (this.deviceQuery.content[i].serialNumber === this.accessory.context.device.serialNumber) {
-        this.platform.log.debug(this.accessory.context.device.name, "speed is:", this.deviceQuery.content[i].fanspeed);
-        this.state.Speed = (this.deviceQuery.content[i].fanspeed as unknown as number) * 100/this.maxSpeed;
-        this.state.Filter = this.deviceQuery.content[i].pecoFilter as unknown as number;
-        this.state.auto = +!!(this.deviceQuery.content[i].mode === "smart") //+!! cast boolean to number
+    else this.platform.log.debug("saved a request");
+    if (MolekulePlatformAccessory.query.content === undefined) throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+    for (let i = 0; i < Object.keys(MolekulePlatformAccessory.query.content).length; i++) {
+      if (MolekulePlatformAccessory.query.content[i].serialNumber === this.accessory.context.device.serialNumber) {
+        this.platform.log.debug(this.accessory.context.device.name, "speed is:", MolekulePlatformAccessory.query.content[i].fanspeed);
+        this.state.Speed = (MolekulePlatformAccessory.query.content[i].fanspeed as unknown as number) * 100/this.maxSpeed;
+        this.state.Filter = MolekulePlatformAccessory.query.content[i].pecoFilter as unknown as number;
+        this.state.auto = +!!(MolekulePlatformAccessory.query.content[i].mode === "smart") //+!! cast boolean to number
         this.platform.log.debug(this.accessory.context.device.name, "auto/manual:", this.state.auto? "auto" : "manual")
-        switch (this.deviceQuery.content[i].aqi){
+        switch (MolekulePlatformAccessory.query.content[i].aqi){
           case "good":
             this.state.airQuality = 1;
             break;
@@ -233,11 +245,11 @@ export class MolekulePlatformAccessory {
             break;
         }
 
-        if (this.deviceQuery.content[i].online === "false") {
+        if (MolekulePlatformAccessory.query.content[i].online === "false") {
           this.platform.log.error(this.accessory.context.device.name + " was reported to be offline by the Molekule API.");
           throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
         }
-        if (this.deviceQuery.content[i].mode !== "off") {
+        if (MolekulePlatformAccessory.query.content[i].mode !== "off") {
           this.state.On = 1;
           this.state.state = 2;
         } else {

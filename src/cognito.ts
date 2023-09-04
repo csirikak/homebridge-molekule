@@ -3,8 +3,7 @@ import {
   CognitoUserPool,
   AuthenticationDetails,
   CognitoUser,
-  CognitoRefreshToken,
-  CognitoIdToken
+  CognitoRefreshToken
 } from 'amazon-cognito-identity-js'
 import('node-fetch');
 let token = '';

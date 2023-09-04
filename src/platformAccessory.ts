@@ -74,15 +74,17 @@ export class MolekulePlatformAccessory {
     this.service.getCharacteristic(this.platform.Characteristic.FilterLifeLevel).onGet(this.getFilterStatus.bind(this));
     switch(this.accessory.context.device.capabilities.AirQualityMonitor){
       case 1:
-        this.service.getCharacteristic(this.platform.Characteristic.AirQuality).onGet(this.getAirQuality.bind(this));;
+        this.service.getCharacteristic(this.platform.Characteristic.AirQuality).onGet(this.getAirQuality.bind(this));
         this.service.getCharacteristic(this.platform.Characteristic.PM2_5Density);
         this.service.getCharacteristic(this.platform.Characteristic.PM10Density);
         this.service.getCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity);
         this.service.getCharacteristic(this.platform.Characteristic.CarbonDioxideLevel);
         this.service.getCharacteristic(this.platform.Characteristic.VOCDensity);
+        break;
       case 2:
         this.service.getCharacteristic(this.platform.Characteristic.AirQuality).onGet(this.getAirQuality.bind(this));
         this.service.getCharacteristic(this.platform.Characteristic.PM2_5Density);
+        break;
     }
     /**
      * Creating multiple services of the same type.
@@ -104,13 +106,15 @@ export class MolekulePlatformAccessory {
     const AQIstats = await this.aqiClass.getAqi(this.accessory.context.device.serialNumber);
     switch(this.accessory.context.device.capabilities.AirQualityMonitor){
       case 1:
-        this.service.updateCharacteristic(this.platform.Characteristic.PM2_5Density, AQIstats["PM2_5"]);
-        this.service.updateCharacteristic(this.platform.Characteristic.PM10Density, AQIstats["PM10"]);
-        this.service.updateCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity, AQIstats["RH"]);
-        this.service.updateCharacteristic(this.platform.Characteristic.CarbonDioxideLevel, AQIstats["CO2"]);
-        this.service.updateCharacteristic(this.platform.Characteristic.VOCDensity, AQIstats["TVOC"]);
+        this.service.updateCharacteristic(this.platform.Characteristic.PM2_5Density, AQIstats["PM2_5"] ?? 0);
+        this.service.updateCharacteristic(this.platform.Characteristic.PM10Density, AQIstats["PM10"] ?? 0);
+        this.service.updateCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity, AQIstats["RH"]) ?? 0;
+        this.service.updateCharacteristic(this.platform.Characteristic.CarbonDioxideLevel, AQIstats["CO2"] ?? 0);
+        this.service.updateCharacteristic(this.platform.Characteristic.VOCDensity, AQIstats["TVOC"] ?? 0);
+        break;
       case 2:
-        this.service.updateCharacteristic(this.platform.Characteristic.PM2_5Density, AQIstats["PM2_5"]);
+        this.service.updateCharacteristic(this.platform.Characteristic.PM2_5Density, AQIstats["PM2_5"] ?? 0);
+        break;
     }
 
   }

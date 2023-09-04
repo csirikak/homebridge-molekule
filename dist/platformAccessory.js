@@ -125,6 +125,7 @@ class MolekulePlatformAccessory {
         return this.state.state;
     }
     async handleAutoSet(value) {
+        var _a;
         let responseCode;
         const clamp = Math.round(Math.min(Math.max((this.state.Speed) / (100 / this.maxSpeed), 1), this.maxSpeed));
         switch (this.accessory.context.device.capabilities.AutoFunctionality) {
@@ -138,7 +139,7 @@ class MolekulePlatformAccessory {
                 break;
             case 2:
                 if (value === 1)
-                    responseCode = (await this.caller.httpCall("POST", this.accessory.context.device.serialNumber + "/actions/enable-smart-mode", '{"silent": "' + this.config.silentAuto + '"}', 1)).status;
+                    responseCode = (await this.caller.httpCall("POST", this.accessory.context.device.serialNumber + "/actions/enable-smart-mode", '{"silent": "' + ((_a = this.config.silentAuto) !== null && _a !== void 0 ? _a : 0) + '"}', 1)).status;
                 else {
                     responseCode = (await this.caller.httpCall("POST", this.accessory.context.device.serialNumber + "/actions/set-fan-speed", '{"fanSpeed": ' + clamp + "}", 1)).status;
                     this.service.updateCharacteristic(this.platform.Characteristic.RotationSpeed, this.state.Speed);
@@ -179,7 +180,8 @@ class MolekulePlatformAccessory {
         return this.state.Speed;
     }
     async getFilterChange() {
-        if (this.state.Filter > this.config.threshold)
+        var _a;
+        if ((_a = this.state.Filter > this.config.threshold) !== null && _a !== void 0 ? _a : 10)
             return 0;
         else
             return 1;

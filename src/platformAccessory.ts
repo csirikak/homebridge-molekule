@@ -145,7 +145,7 @@ export class MolekulePlatformAccessory {
         }
         break;
       case 2:
-        if (value === 1) responseCode = (await this.caller.httpCall("POST", this.accessory.context.device.serialNumber + "/actions/enable-smart-mode", '{"silent": "' + (this.config.silentAuto as number) + '"}', 1)).status
+        if (value === 1) responseCode = (await this.caller.httpCall("POST", this.accessory.context.device.serialNumber + "/actions/enable-smart-mode", '{"silent": "' + ((this.config.silentAuto ?? 0) as number) + '"}', 1)).status
         else {
           responseCode = (await this.caller.httpCall("POST", this.accessory.context.device.serialNumber + "/actions/set-fan-speed", '{"fanSpeed": ' + clamp + "}", 1)).status;
           this.service.updateCharacteristic(this.platform.Characteristic.RotationSpeed, this.state.Speed);
@@ -192,7 +192,7 @@ export class MolekulePlatformAccessory {
   }
 
   async getFilterChange(): Promise<CharacteristicValue> {
-    if (this.state.Filter > this.config.threshold) return 0;
+    if (this.state.Filter > this.config.threshold ?? 10) return 0;
     else return 1;
   }
 

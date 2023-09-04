@@ -118,6 +118,8 @@ export class MolekuleHomebridgePlatform implements DynamicPlatformPlugin {
 
         // create the accessory handler for the restored accessory
         // this is imported from `platformAccessory.ts`
+        existingAccessory.context.device.capabilities = Models[device.model]
+        this.api.updatePlatformAccessories([existingAccessory]);
         new MolekulePlatformAccessory(this, existingAccessory, this.config, this.log, this.caller, devicesQuery)
 
         // it is possible to remove platform accessories at any time using `api.unregisterPlatformAccessories`, eg.:

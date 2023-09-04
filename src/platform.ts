@@ -88,8 +88,7 @@ export class MolekuleHomebridgePlatform implements DynamicPlatformPlugin {
   async discoverDevices () {
     this.log.debug('Discover Devices Called')
     const response = this.caller.httpCall('GET', '', '', 1);
-    let devicesQuery: queryResponse
-    devicesQuery = await (await response).json();
+    const devicesQuery: queryResponse = await (await response).json();
     // loop over the discovered devices and register each one if it has not already been registered
     if ((await response).status !== 200) 
     {

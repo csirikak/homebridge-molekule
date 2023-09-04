@@ -53,8 +53,7 @@ class MolekuleHomebridgePlatform {
     async discoverDevices() {
         this.log.debug('Discover Devices Called');
         const response = this.caller.httpCall('GET', '', '', 1);
-        let devicesQuery;
-        devicesQuery = await (await response).json();
+        const devicesQuery = await (await response).json();
         // loop over the discovered devices and register each one if it has not already been registered
         if ((await response).status !== 200) {
             this.log.error('Fatal error, discover devices failed. Try running homebridge in debug mode to see HTTP status code.');

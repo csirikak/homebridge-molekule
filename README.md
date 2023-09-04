@@ -1,10 +1,25 @@
+
+<p align="center">
+  <a href="https://molekule.com"><img src="https://github.com/csirikak/homebridge-molekule/assets/32028457/9736d1ff-ddcc-4f9d-87c9-dc6607a1ec29" height="140"></a>
+</p>
+<span align="center">
+  
 # homebridge-molekule
+<a href="https://www.npmjs.com/package/homebridge-molekule"><img title="npm version" src="https://badgen.net/npm/v/homebridge-molekule?label=stable"></a>
+<a href="https://github.com/csirikak/homebridge-molekule/tree/test"><img title="npm version" src="https://badgen.net/npm/v/homebridge-molekule/alpha?label=alpha"></a>
+<a href="https://www.npmjs.com/package/homebridge-molekule"><img title="npm downloads" src="https://badgen.net/npm/dt/homebridge-molekule"></a>
+</span>
+
+<span align="left">
+
 A Homebridge Plugin for Molekule Air Purifiers. Once you install this plugin you can say:
+
 ```
 Hey Siri, what's the status of the Air Purifier Filter?
 Hey Siri, set the speed of the Molekule to 60%.
 Hey Siri, what's the air quality in the Living Room?
 ```
+
 ## Installation
 Search for Molekule under Plugins in the Homebridge UI.
 Or, copy and paste the following into a terminal
@@ -30,3 +45,4 @@ It should be configurable in plugin settings using homebridge-ui-x, if not, add 
 # Notes and Issues
 Using an incorrect password can cause a need for a full password reset on your account. Pay special attention to the password you're using.
 This plugin loads the names that are set for each device in the Molekule app. 
+</span>

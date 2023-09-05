@@ -7,6 +7,7 @@ import { models } from "./devices.json"
 export interface queryResponse {
   content: deviceData[];
   requestTime: number;
+  change: boolean;
 }
 interface deviceData {
   name: string;

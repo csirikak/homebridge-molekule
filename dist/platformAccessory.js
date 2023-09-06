@@ -90,17 +90,18 @@ class MolekulePlatformAccessory {
      * These are sent when the user changes the state of an accessory, for example, turning on a Light bulb.
      */
     async updateAirQuality() {
+        var _a, _b, _c, _d, _e, _f;
         const AQIstats = await this.aqiClass.getAqi(this.accessory.context.device.serialNumber);
         switch (this.accessory.context.device.capabilities.AirQualityMonitor) {
             case 1:
-                this.service.updateCharacteristic(this.platform.Characteristic.PM2_5Density, AQIstats["PM2_5"]);
-                this.service.updateCharacteristic(this.platform.Characteristic.PM10Density, AQIstats["PM10"]);
-                this.service.updateCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity, AQIstats["RH"]);
-                this.service.updateCharacteristic(this.platform.Characteristic.CarbonDioxideLevel, AQIstats["CO2"]);
-                this.service.updateCharacteristic(this.platform.Characteristic.VOCDensity, AQIstats["TVOC"]);
+                this.service.updateCharacteristic(this.platform.Characteristic.PM2_5Density, (_a = AQIstats["PM2_5"]) !== null && _a !== void 0 ? _a : 0);
+                this.service.updateCharacteristic(this.platform.Characteristic.PM10Density, (_b = AQIstats["PM10"]) !== null && _b !== void 0 ? _b : 0);
+                this.service.updateCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity, (_c = AQIstats["RH"]) !== null && _c !== void 0 ? _c : 0);
+                this.service.updateCharacteristic(this.platform.Characteristic.CarbonDioxideLevel, (_d = AQIstats["CO2"]) !== null && _d !== void 0 ? _d : 0);
+                this.service.updateCharacteristic(this.platform.Characteristic.VOCDensity, (_e = AQIstats["TVOC"]) !== null && _e !== void 0 ? _e : 0);
                 break;
             case 2:
-                this.service.updateCharacteristic(this.platform.Characteristic.PM2_5Density, AQIstats["PM2_5"]);
+                this.service.updateCharacteristic(this.platform.Characteristic.PM2_5Density, (_f = AQIstats["PM2_5"]) !== null && _f !== void 0 ? _f : 0);
         }
     }
     async getAirQuality() {

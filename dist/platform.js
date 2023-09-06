@@ -14,11 +14,11 @@ const refreshInterval = 60; //token refresh interval in minutes
  * parse the user config and discover/register accessories with Homebridge.
  */
 class MolekuleHomebridgePlatform {
-    constructor(log, config, api, caller = new cognito_1.HttpAJAX(log, config)) {
+    constructor(log, config, api, requester = new cognito_1.HttpAJAX(log, config)) {
         this.log = log;
         this.config = config;
         this.api = api;
-        this.caller = caller;
+        this.requester = requester;
         this.Service = this.api.hap.Service;
         this.Characteristic = this.api.hap.Characteristic;
         // this is used to track restored cached accessories
@@ -32,7 +32,7 @@ class MolekuleHomebridgePlatform {
             // run the method to discover / register your devices as accessories
             this.discoverDevices();
             if (!intervalID)
-                intervalID = setInterval(() => this.caller.refreshAuthToken(), refreshInterval * 60 * 1000);
+                intervalID = setInterval(() => this.requester.refreshIdToken(), refreshInterval * 60 * 1000);
         });
         this.log.debug('Finished initializing platform ', settings_1.PLATFORM_NAME);
     }
@@ -52,7 +52,7 @@ class MolekuleHomebridgePlatform {
      */
     async discoverDevices() {
         this.log.debug('Discover Devices Called');
-        const response = this.caller.httpCall('GET', '', '', 1);
+        const response = this.requester.httpCall('GET', '', '', 1);
         const devicesQuery = await (await response).json();
         // loop over the discovered devices and register each one if it has not already been registered
         if ((await response).status !== 200) {
@@ -81,7 +81,7 @@ class MolekuleHomebridgePlatform {
                 // this is imported from `platformAccessory.ts`
                 existingAccessory.context.device.capabilities = Models[device.model];
                 this.api.updatePlatformAccessories([existingAccessory]);
-                new platformAccessory_1.MolekulePlatformAccessory(this, existingAccessory, this.config, this.log, this.caller, devicesQuery);
+                new platformAccessory_1.MolekulePlatformAccessory(this, existingAccessory, this.config, this.log, this.requester);
                 // it is possible to remove platform accessories at any time using `api.unregisterPlatformAccessories`, eg.:
                 // remove platform accessories when no longer present
                 // this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [existingAccessory]);
@@ -98,7 +98,7 @@ class MolekuleHomebridgePlatform {
                 accessory.context.device = device;
                 // create the accessory handler for the newly create accessory
                 // this is imported from `platformAccessory.ts`
-                new platformAccessory_1.MolekulePlatformAccessory(this, accessory, this.config, this.log, this.caller, devicesQuery);
+                new platformAccessory_1.MolekulePlatformAccessory(this, accessory, this.config, this.log, this.requester);
                 // link the accessory to your platform
                 this.api.registerPlatformAccessories(settings_1.PLUGIN_NAME, settings_1.PLATFORM_NAME, [accessory]);
             }

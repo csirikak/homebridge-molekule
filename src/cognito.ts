@@ -3,10 +3,10 @@ import {
   CognitoUserPool,
   AuthenticationDetails,
   CognitoUser,
-  CognitoRefreshToken
+  CognitoRefreshToken,
 } from 'amazon-cognito-identity-js'
 import('node-fetch');
-let token = ''
+let token = '';
 let refreshToken: CognitoRefreshToken
 let authError: boolean
 // Molekule API settings
@@ -43,18 +43,18 @@ export class HttpAJAX {
     this.authenticationDetails = new AuthenticationDetails(this.authenticationData)
     this.cognitoUser = new CognitoUser(this.userData)
   }
-  refreshAuthToken() {
+  refreshIdToken() {
     return new Promise((resolve, reject) =>
     this.cognitoUser.refreshSession(refreshToken, (err, session) => {
       if (err){
-        this.log.info('Auth token fetch using refresh token failed. Fallback to username/password')
+        this.log.info('ID token fetch using refresh token failed. Fallback to username/password')
         this.log.debug(err)
         reject(err)
       }
       else {
         this.log.info('✓ Token refresh successful')
         authError = false
-        token = session.getAccessToken().getJwtToken()
+        token = session.getIdToken().getJwtToken();
         resolve(session)
       }
     }));
@@ -65,11 +65,11 @@ export class HttpAJAX {
     return new Promise((resolve, reject) =>
       this.cognitoUser.authenticateUser(this.authenticationDetails, {
         onSuccess: (result) => {
-          token = result.getAccessToken().getJwtToken()
           refreshToken = result.getRefreshToken()
           this.log.info('✓ Valid Login Credentials')
           authError = false
-          resolve(result.getAccessToken().getJwtToken())
+          token = result.getIdToken().getJwtToken()
+          resolve(token)
         },
         onFailure: (err) => {
           this.log.error('API Authentication Failure, possibly a password/username error.');
@@ -79,7 +79,7 @@ export class HttpAJAX {
   }
   async httpCall (method: string, extraUrl: string, send: string, retry: number): Promise<Response> {
     let response:Response;
-    if (authError) await this.refreshAuthToken().catch(e => {this.initiateAuth().catch(e => {this.log.error(e);return});this.log.debug(e)})
+    if (authError) await this.refreshIdToken().catch(e => {this.initiateAuth().catch(e => {this.log.error(e);return});this.log.debug(e)})
     if ((token === '') || authError) await this.initiateAuth().catch(err => {this.log.error(err);return});
     if (method === 'GET') {
       const contents = {

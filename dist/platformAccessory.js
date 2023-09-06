@@ -64,12 +64,12 @@ class MolekulePlatformAccessory {
         switch (this.accessory.context.device.capabilities.AirQualityMonitor) {
             case 1:
                 this.service.getCharacteristic(this.platform.Characteristic.AirQuality).onGet(this.getAirQuality.bind(this));
-                ;
                 this.service.getCharacteristic(this.platform.Characteristic.PM2_5Density);
                 this.service.getCharacteristic(this.platform.Characteristic.PM10Density);
                 this.service.getCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity);
                 this.service.getCharacteristic(this.platform.Characteristic.CarbonDioxideLevel);
                 this.service.getCharacteristic(this.platform.Characteristic.VOCDensity);
+                break;
             case 2:
                 this.service.getCharacteristic(this.platform.Characteristic.AirQuality).onGet(this.getAirQuality.bind(this));
                 this.service.getCharacteristic(this.platform.Characteristic.PM2_5Density);
@@ -98,6 +98,7 @@ class MolekulePlatformAccessory {
                 this.service.updateCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity, AQIstats["RH"]);
                 this.service.updateCharacteristic(this.platform.Characteristic.CarbonDioxideLevel, AQIstats["CO2"]);
                 this.service.updateCharacteristic(this.platform.Characteristic.VOCDensity, AQIstats["TVOC"]);
+                break;
             case 2:
                 this.service.updateCharacteristic(this.platform.Characteristic.PM2_5Density, AQIstats["PM2_5"]);
         }
@@ -142,7 +143,6 @@ class MolekulePlatformAccessory {
      */
     async handleActiveGet() {
         this.updateStates();
-        this.platform.log.debug(this.accessory.context.device.name + " state is: " + this.state.On);
         return this.state.On;
         // if you need to return an error to show the device as "Not Responding" in the Home app:
         // throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
@@ -165,7 +165,7 @@ class MolekulePlatformAccessory {
                 break;
             case 2:
                 if (value === 1)
-                    responseCode = (await this.requester.httpCall("POST", this.accessory.context.device.serialNumber + "/actions/enable-smart-mode", '{"silent": "' + ((_a = this.config.silentAuto) !== null && _a !== void 0 ? _a : 0) + '"}', 1)).status;
+                    responseCode = (await this.requester.httpCall("POST", this.accessory.context.device.serialNumber + "/actions/enable-smart-mode", '{"silent": "' + (+((_a = this.config.silentAuto) !== null && _a !== void 0 ? _a : 0)) + '"}', 1)).status;
                 else {
                     responseCode = (await this.requester.httpCall("POST", this.accessory.context.device.serialNumber + "/actions/set-fan-speed", '{"fanSpeed": ' + clamp + "}", 1)).status;
                     this.service.updateCharacteristic(this.platform.Characteristic.RotationSpeed, this.state.Speed);
@@ -176,7 +176,7 @@ class MolekulePlatformAccessory {
                 this.service.updateCharacteristic(this.platform.Characteristic.TargetAirPurifierState, 0);
                 break;
         }
-        if (responseCode === 204) {
+        if (responseCode === 204 || responseCode === 200) {
             this.state.auto = value;
             this.service.updateCharacteristic(this.platform.Characteristic.TargetAirPurifierState, this.state.auto);
             this.platform.log.info(this.accessory.context.device.name, "set", value ? "auto" : "manual", "state.");
@@ -208,7 +208,8 @@ class MolekulePlatformAccessory {
         return this.state.Speed;
     }
     async getFilterChange() {
-        if (this.state.Filter > this.config.threshold)
+        var _a;
+        if ((_a = this.state.Filter > this.config.threshold) !== null && _a !== void 0 ? _a : 10)
             return 0;
         else
             return 1;
@@ -264,6 +265,7 @@ class MolekulePlatformAccessory {
                     this.state.On = 0;
                     this.state.state = 0;
                 }
+                this.log.debug(this.accessory.context.device.name, this.state);
             }
         }
         this.service.updateCharacteristic(this.platform.Characteristic.RotationSpeed, this.state.Speed);

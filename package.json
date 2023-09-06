@@ -10,7 +10,7 @@
     "url": "git://github.com/csirikak/homebridge-molekule.git"
   },
   "bugs": {
-    "url": "https://github.com/USERNAME/GITHUB_PROJECT_NAME/issues"
+    "url": "https://github.com/csirikak/homebridge-molekule/issues"
   },
   "engines": {
     "node": ">=14.18.1",

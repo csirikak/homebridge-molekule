@@ -74,12 +74,13 @@ export class MolekulePlatformAccessory {
     this.service.getCharacteristic(this.platform.Characteristic.FilterLifeLevel).onGet(this.getFilterStatus.bind(this));
     switch(this.accessory.context.device.capabilities.AirQualityMonitor){
       case 1:
-        this.service.getCharacteristic(this.platform.Characteristic.AirQuality).onGet(this.getAirQuality.bind(this));;
+        this.service.getCharacteristic(this.platform.Characteristic.AirQuality).onGet(this.getAirQuality.bind(this));
         this.service.getCharacteristic(this.platform.Characteristic.PM2_5Density);
         this.service.getCharacteristic(this.platform.Characteristic.PM10Density);
         this.service.getCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity);
         this.service.getCharacteristic(this.platform.Characteristic.CarbonDioxideLevel);
         this.service.getCharacteristic(this.platform.Characteristic.VOCDensity);
+        break;
       case 2:
         this.service.getCharacteristic(this.platform.Characteristic.AirQuality).onGet(this.getAirQuality.bind(this));
         this.service.getCharacteristic(this.platform.Characteristic.PM2_5Density);
@@ -109,6 +110,7 @@ export class MolekulePlatformAccessory {
         this.service.updateCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity, AQIstats["RH"]);
         this.service.updateCharacteristic(this.platform.Characteristic.CarbonDioxideLevel, AQIstats["CO2"]);
         this.service.updateCharacteristic(this.platform.Characteristic.VOCDensity, AQIstats["TVOC"]);
+        break;
       case 2:
         this.service.updateCharacteristic(this.platform.Characteristic.PM2_5Density, AQIstats["PM2_5"]);
     }
@@ -154,7 +156,6 @@ export class MolekulePlatformAccessory {
    */
   async handleActiveGet(): Promise<CharacteristicValue> {
     this.updateStates()
-    this.platform.log.debug(this.accessory.context.device.name + " state is: " + this.state.On);
     return this.state.On;
     // if you need to return an error to show the device as "Not Responding" in the Home app:
     // throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
@@ -176,7 +177,7 @@ export class MolekulePlatformAccessory {
         }
         break;
       case 2:
-        if (value === 1) responseCode = (await this.requester.httpCall("POST", this.accessory.context.device.serialNumber + "/actions/enable-smart-mode", '{"silent": "' + ((this.config.silentAuto ?? 0) as number) + '"}', 1)).status
+        if (value === 1) responseCode = (await this.requester.httpCall("POST", this.accessory.context.device.serialNumber + "/actions/enable-smart-mode", '{"silent": "' + (+(this.config.silentAuto ?? 0)) + '"}', 1)).status
         else {
           responseCode = (await this.requester.httpCall("POST", this.accessory.context.device.serialNumber + "/actions/set-fan-speed", '{"fanSpeed": ' + clamp + "}", 1)).status;
           this.service.updateCharacteristic(this.platform.Characteristic.RotationSpeed, this.state.Speed);
@@ -187,7 +188,7 @@ export class MolekulePlatformAccessory {
         this.service.updateCharacteristic(this.platform.Characteristic.TargetAirPurifierState, 0);
         break;
     }
-    if (responseCode === 204) {
+    if (responseCode === 204 || responseCode === 200) {
       this.state.auto = value as number;
       this.service.updateCharacteristic(this.platform.Characteristic.TargetAirPurifierState, this.state.auto);
       this.platform.log.info(this.accessory.context.device.name, "set", value? "auto" : "manual", "state.");
@@ -225,7 +226,7 @@ export class MolekulePlatformAccessory {
   }
 
   async getFilterChange(): Promise<CharacteristicValue> {
-    if (this.state.Filter > this.config.threshold) return 0;
+    if (this.state.Filter > this.config.threshold ?? 10) return 0;
     else return 1;
   }
 
@@ -280,6 +281,7 @@ export class MolekulePlatformAccessory {
           this.state.On = 0;
           this.state.state = 0;
         }
+        this.log.debug(this.accessory.context.device.name, this.state);
       }
     }
     this.service.updateCharacteristic(this.platform.Characteristic.RotationSpeed, this.state.Speed);

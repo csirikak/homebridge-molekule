@@ -9,7 +9,7 @@ class aqiReport {
     async getAqi(serialNumber) {
         const extra = "/sensordata?aggregation=false&fromDate=" + (Date.now() - 1000 * 60 * 60) + "&resolution=5&toDate=" + Date.now();
         const response = await (await this.requester.httpCall("GET", serialNumber + extra, '', 1)).json();
-        let data = {
+        const data = {
             'PM2_5': 0,
             'PM10': 0,
             'RH': 0,

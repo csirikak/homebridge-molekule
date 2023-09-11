@@ -1,4 +1,3 @@
-
 <p align="center">
   <a href="https://molekule.com"><img src="https://github.com/csirikak/homebridge-molekule/assets/32028457/9736d1ff-ddcc-4f9d-87c9-dc6607a1ec29" height="140"></a>
 </p>
@@ -21,13 +20,18 @@ Hey Siri, what's the air quality in the Living Room?
 ```
 
 ## Installation
+
 Search for Molekule under Plugins in the Homebridge UI.
 Or, copy and paste the following into a terminal
+
 ```bash
 npm -g i homebridge-molekule
 ```
+
 ## Configuration
+
 It should be configurable in plugin settings using homebridge-ui-x, if not, add this to your config.json file under Platforms.
+
 ```json
 {
   "platform": "Molekule",
@@ -39,10 +43,13 @@ It should be configurable in plugin settings using homebridge-ui-x, if not, add 
   "silentAuto": false
 }
 ```
+
 - `threshold` sets the percentage at which a filter change warning is dislayed in the home app
 - `excludeAirMiniPlus` disables Air Mini+ so you can use their native HomeKit function
-- `silentAuto` default auto state on the Air Pro, silent (true) or normal (false)
+- `silentAuto` default auto state on the Air Pro, silent (true) or standard (false)
+
 # Notes and Issues
+
 Using an incorrect password can cause a need for a full password reset on your account. Pay special attention to the password you're using.
-This plugin loads the names that are set for each device in the Molekule app. 
+This plugin loads the names that are set for each device in the Molekule app.
 </span>

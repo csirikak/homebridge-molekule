@@ -19,31 +19,31 @@
         "required": true
       },
       "password": {
-          "title": "Password",
-          "type": "string",
-          "placeholder": "********",
-          "required": true,
-          "description": "<b>Ensure password is correct, othersise a reset may become necessary.</b>"
+        "title": "Password",
+        "type": "string",
+        "placeholder": "********",
+        "required": true,
+        "description": "<b>Ensure password is correct, othersise a reset may become necessary.</b>"
       },
       "threshold": {
-          "title": "Filter Change Warning Percentage",
-          "type": "integer",
-          "default": 10,
-          "minimum": 0,
-          "maximum": 100,
-          "description": "Show <b>Change Filter</b> warning once Filter Life reaches this value."
+        "title": "Filter Change Warning Percentage",
+        "type": "integer",
+        "default": 10,
+        "minimum": 0,
+        "maximum": 100,
+        "description": "Show <b>Change Filter</b> warning once Filter Life reaches this value."
       },
       "excludeAirMiniPlus": {
-          "title": "Exclude Air Mini+",
-          "type": "boolean",
-          "default": false,
-          "description": "Exclude HomeKit enabled Air Mini+"
+        "title": "Exclude Air Mini+",
+        "type": "boolean",
+        "default": false,
+        "description": "Exclude HomeKit enabled Air Mini+"
       },
       "silentAuto": {
-          "title": "Silent Auto",
-          "type": "boolean",
-          "default": false,
-          "description": "When setting Auto/Manual state, use Silent or Normal auto state on Air Pro devices?"
+        "title": "Silent Auto",
+        "type": "boolean",
+        "default": false,
+        "description": "When setting Auto/Manual state, use Silent or Standard auto state on Air Pro devices?"
       }
     }
   }

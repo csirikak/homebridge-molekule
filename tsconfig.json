@@ -3,13 +3,8 @@
     "target": "ES2018",
     "useUnknownInCatchVariables": false,
     "resolveJsonModule": true,
-	"module": "node16",
-    "lib": [
-      "ES2015",
-      "ES2016",
-      "ES2017",
-      "ES2018"
-    ],
+    "module": "node16",
+    "lib": ["ES2015", "ES2016", "ES2017", "ES2018"],
     "sourceMap": true,
     "rootDir": "src",
     "outDir": "dist",
@@ -18,7 +13,5 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": [
-    "src"
-  ]
+  "include": ["src"]
 }

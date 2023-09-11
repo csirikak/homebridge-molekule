@@ -1,19 +1,19 @@
 {
-    "models": {
-        "Air Mini Pro": {
-            "MaxFanSpeed": 5,
-            "AutoFunctionality": 1,
-            "AirQualityMonitor": 2
-        },
-        "Sequoia Basic": {
-            "MaxFanSpeed": 6,
-            "AutoFunctionality": 2,
-            "AirQualityMonitor": 1
-        },
-        "Air Mini Basic": {
-            "MaxFanSpeed": 5,
-            "AutoFunctionality": 0,
-            "AirQualityMonitor": 0
-        }
+  "models": {
+    "Air Mini Pro": {
+      "MaxFanSpeed": 5,
+      "AutoFunctionality": 1,
+      "AirQualityMonitor": 2
+    },
+    "Sequoia Basic": {
+      "MaxFanSpeed": 6,
+      "AutoFunctionality": 2,
+      "AirQualityMonitor": 1
+    },
+    "Air Mini Basic": {
+      "MaxFanSpeed": 5,
+      "AutoFunctionality": 0,
+      "AirQualityMonitor": 0
     }
+  }
 }

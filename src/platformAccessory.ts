@@ -16,6 +16,8 @@ import { aqiReport } from "./aqiReport";
  */
 export class MolekulePlatformAccessory {
   private service: Service;
+  private aqiService: Service;
+  private humidityService: Service;
   static query: queryResponse = {
     content: [],
     requestTime: 0,
@@ -61,11 +63,15 @@ export class MolekulePlatformAccessory {
         accessory.context.device.firmwareVersion,
       );
 
-    // get the AirPurifier service if it exists, otherwise create a new AirPurifier service
+    // clear the AirPurifier service if it exists, and create a new AirPurifier service
     // you can create multiple services for each accessory
-    this.service =
-      this.accessory.getService(this.platform.Service.AirPurifier) ||
-      this.accessory.addService(this.platform.Service.AirPurifier);
+    // clearing needed to simplify handling of service split function.
+
+    if (this.accessory.getService(this.platform.Service.AirPurifier) ?? false) {
+      this.accessory.removeService(this.accessory.getService(this.platform.Service.AirPurifier)!)
+    }
+
+    this.service = this.accessory.addService(this.platform.Service.AirPurifier);
     // set the service name, this is what is displayed as the default name on the Home app
     // in this example we are using the name we stored in the `accessory.context` in the `discoverDevices` method.
     this.service.setCharacteristic(
@@ -102,31 +108,48 @@ export class MolekulePlatformAccessory {
     this.service
       .getCharacteristic(this.platform.Characteristic.FilterLifeLevel)
       .onGet(this.getFilterStatus.bind(this));
+    this.aqiService = this.service;
+    this.humidityService = this.service;
+    if (this.config.AQIseparate ?? false) {
+      this.aqiService = this.accessory.getService(this.platform.Service.AirQualitySensor) ||
+      this.accessory.addService(this.platform.Service.AirQualitySensor);
+    }
+    else {
+      if (this.accessory.getService(this.platform.Service.AirQualitySensor) ?? false) {
+        this.accessory.removeService(this.accessory.getService(this.platform.Service.AirQualitySensor)!);
+      }
+      if (this.accessory.getService(this.platform.Service.HumiditySensor) ?? false) {
+        this.accessory.removeService(this.accessory.getService(this.platform.Service.HumiditySensor)!);
+      }
+    }
     switch (this.accessory.context.device.capabilities.AirQualityMonitor) {
       case 1:
-        this.service
+        this.aqiService
           .getCharacteristic(this.platform.Characteristic.AirQuality)
           .onGet(this.getAirQuality.bind(this));
-        this.service.getCharacteristic(
+        this.aqiService.getCharacteristic(
           this.platform.Characteristic.PM2_5Density,
         );
-        this.service.getCharacteristic(
+        this.aqiService.getCharacteristic(
           this.platform.Characteristic.PM10Density,
         );
-        this.service.getCharacteristic(
-          this.platform.Characteristic.CurrentRelativeHumidity,
-        );
-        this.service.getCharacteristic(
+        this.aqiService.getCharacteristic(
           this.platform.Characteristic.CarbonDioxideLevel,
         );
-        this.service.getCharacteristic(this.platform.Characteristic.VOCDensity);
-
+        this.aqiService.getCharacteristic(this.platform.Characteristic.VOCDensity);
+        if (this.config.AQIseparate ?? false) {
+          this.humidityService = this.accessory.getService(this.platform.Service.HumiditySensor) || 
+          this.accessory.addService(this.platform.Service.HumiditySensor);
+        }
+        this.humidityService.getCharacteristic(
+          this.platform.Characteristic.CurrentRelativeHumidity,
+        );
         break;
       case 2:
-        this.service
+        this.aqiService
           .getCharacteristic(this.platform.Characteristic.AirQuality)
           .onGet(this.getAirQuality.bind(this));
-        this.service.getCharacteristic(
+        this.aqiService.getCharacteristic(
           this.platform.Characteristic.PM2_5Density,
         );
     }
@@ -153,29 +176,29 @@ export class MolekulePlatformAccessory {
     this.log.debug(this.accessory.context.device.name, AQIstats);
     switch (this.accessory.context.device.capabilities.AirQualityMonitor) {
       case 1:
-        this.service.updateCharacteristic(
+        this.aqiService.updateCharacteristic(
           this.platform.Characteristic.PM2_5Density,
           AQIstats["PM2_5"] ?? 0,
         );
-        this.service.updateCharacteristic(
+        this.aqiService.updateCharacteristic(
           this.platform.Characteristic.PM10Density,
           AQIstats["PM10"] ?? 0,
         );
-        this.service.updateCharacteristic(
+        this.humidityService.updateCharacteristic(
           this.platform.Characteristic.CurrentRelativeHumidity,
           AQIstats["RH"] ?? 0,
         );
-        this.service.updateCharacteristic(
+        this.aqiService.updateCharacteristic(
           this.platform.Characteristic.CarbonDioxideLevel,
           AQIstats["CO2"] ?? 0,
         );
-        this.service.updateCharacteristic(
+        this.aqiService.updateCharacteristic(
           this.platform.Characteristic.VOCDensity,
           AQIstats["TVOC"] ?? 0,
         );
         break;
       case 2:
-        this.service.updateCharacteristic(
+        this.aqiService.updateCharacteristic(
           this.platform.Characteristic.PM2_5Density,
           AQIstats["PM2_5"] ?? 0,
         );

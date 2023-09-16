@@ -44,6 +44,12 @@
         "type": "boolean",
         "default": false,
         "description": "When setting Auto/Manual state, use Silent or Standard auto state on Air Pro devices?"
+      },
+      "AQIseparate": {
+        "title": "Separate AQI accessory",
+        "type": "boolean",
+        "default": false,
+        "description": "Report AQI as a separate accessory. Extra steps to set auto/manual state, although you can see the air quality in the home overview."
       }
     }
   }

@@ -47,6 +47,11 @@ It should be configurable in plugin settings using homebridge-ui-x, if not, add 
 - `threshold` sets the percentage at which a filter change warning is dislayed in the home app
 - `excludeAirMiniPlus` disables Air Mini+ so you can use their native HomeKit function
 - `silentAuto` default auto state on the Air Pro, silent (true) or standard (false)
+- `AQIseparate` reports AQI and humidity as a separate accessory so that the data is present in the home overview
+# v1.4.1
+- renamed `normal` to `standard`
+- added `AQIseparate` switch to separate humidity and AQI reporting
+- minor bug fixes
 
 # Notes and Issues
 

@@ -48,7 +48,7 @@
       "AQIseparate": {
         "title": "Separate AQI accessory",
         "type": "boolean",
-        "default": false,
+        "default": true,
         "description": "Report AQI as a separate accessory. Extra steps to set auto/manual state, although you can see the air quality in the home overview."
       }
     }

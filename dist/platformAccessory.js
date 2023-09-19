@@ -9,7 +9,7 @@ const aqiReport_1 = require("./aqiReport");
  */
 class MolekulePlatformAccessory {
     constructor(platform, accessory, config, log, requester) {
-        var _a, _b, _c, _d, _e, _f, _g;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j;
         this.platform = platform;
         this.accessory = accessory;
         this.config = config;
@@ -46,8 +46,6 @@ class MolekulePlatformAccessory {
         // set the service name, this is what is displayed as the default name on the Home app
         // in this example we are using the name we stored in the `accessory.context` in the `discoverDevices` method.
         this.service.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.name);
-        this.filterService = this.accessory.getService(this.platform.Service.FilterMaintenance) ||
-            this.accessory.addService(this.platform.Service.FilterMaintenance);
         // each service must implement at-minimum the "required characteristics" for the given service type
         // see https://developers.homebridge.io/#/service/AirPurifier
         // register handlers for the On/Off Characteristic
@@ -70,23 +68,23 @@ class MolekulePlatformAccessory {
             .getCharacteristic(this.platform.Characteristic.RotationSpeed)
             .onSet(this.setSpeed.bind(this))
             .onGet(this.getSpeed.bind(this));
-        this.filterService
+        this.service
             .getCharacteristic(this.platform.Characteristic.FilterChangeIndication)
             .onGet(this.getFilterChange.bind(this));
-        this.filterService
+        this.service
             .getCharacteristic(this.platform.Characteristic.FilterLifeLevel)
             .onGet(this.getFilterStatus.bind(this));
         this.aqiService = this.service;
         this.humidityService = this.service;
-        if ((_d = this.config.AQIseparate) !== null && _d !== void 0 ? _d : false) {
+        if (((_d = this.config.AQIseparate) !== null && _d !== void 0 ? _d : false) && ((_f = (_e = this.accessory.context.device.capabilities) === null || _e === void 0 ? void 0 : _e.AirQualityMonitor) !== null && _f !== void 0 ? _f : false)) {
             this.aqiService = this.accessory.getService(this.platform.Service.AirQualitySensor) ||
                 this.accessory.addService(this.platform.Service.AirQualitySensor);
         }
         else {
-            if ((_e = this.accessory.getService(this.platform.Service.AirQualitySensor)) !== null && _e !== void 0 ? _e : false) {
+            if ((_g = this.accessory.getService(this.platform.Service.AirQualitySensor)) !== null && _g !== void 0 ? _g : false) {
                 this.accessory.removeService(this.accessory.getService(this.platform.Service.AirQualitySensor));
             }
-            if ((_f = this.accessory.getService(this.platform.Service.HumiditySensor)) !== null && _f !== void 0 ? _f : false) {
+            if ((_h = this.accessory.getService(this.platform.Service.HumiditySensor)) !== null && _h !== void 0 ? _h : false) {
                 this.accessory.removeService(this.accessory.getService(this.platform.Service.HumiditySensor));
             }
         }
@@ -99,7 +97,7 @@ class MolekulePlatformAccessory {
                 this.aqiService.getCharacteristic(this.platform.Characteristic.PM10Density);
                 this.aqiService.getCharacteristic(this.platform.Characteristic.CarbonDioxideLevel);
                 this.aqiService.getCharacteristic(this.platform.Characteristic.VOCDensity);
-                if ((_g = this.config.AQIseparate) !== null && _g !== void 0 ? _g : false) {
+                if ((_j = this.config.AQIseparate) !== null && _j !== void 0 ? _j : false) {
                     this.humidityService = this.accessory.getService(this.platform.Service.HumiditySensor) ||
                         this.accessory.addService(this.platform.Service.HumiditySensor);
                 }

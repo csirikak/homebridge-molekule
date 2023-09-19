@@ -113,7 +113,11 @@ export class HttpAJAX {
           "content-type": "application/json",
         },
       };
-      response = await fetch(url + extraUrl, contents)
+      try { response = await fetch(url + extraUrl, contents) }
+      catch(e) {
+        this.log.error(e);
+        return new Response(null, {status: 404});
+      };
       this.log.debug("HTTP GET STATUS: " + response.status);
       //this.log.debug('HTTP GET CONTENTS: ' + JSON.stringify(response))
       if (response.status === 401 && retry > 0) {
@@ -133,7 +137,7 @@ export class HttpAJAX {
       try { response = await fetch(url + extraUrl, contents) }
       catch(e) {
         this.log.error(e);
-        throw e;
+        return new Response(null, {status: 404});
       };
       this.log.debug(
         "HTTP POST STATUS: " + response.status + " With contents: " + send,

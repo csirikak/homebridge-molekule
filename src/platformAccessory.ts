@@ -110,7 +110,7 @@ export class MolekulePlatformAccessory {
       .onGet(this.getFilterStatus.bind(this));
     this.aqiService = this.service;
     this.humidityService = this.service;
-    if (this.config.AQIseparate ?? false) {
+    if ((this.config.AQIseparate ?? false) && (this.accessory.context.device.capabilities?.AirQualityMonitor ?? false)) {
       this.aqiService = this.accessory.getService(this.platform.Service.AirQualitySensor) ||
       this.accessory.addService(this.platform.Service.AirQualitySensor);
     }

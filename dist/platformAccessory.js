@@ -128,7 +128,14 @@ class MolekulePlatformAccessory {
      */
     async updateAirQuality() {
         var _a, _b, _c, _d, _e, _f, _g, _h;
-        const AQIstats = await this.aqiClass.getAqi(this.accessory.context.device.serialNumber);
+        let AQIstats;
+        try {
+            AQIstats = await this.aqiClass.getAqi(this.accessory.context.device.serialNumber);
+        }
+        catch (e) {
+            this.log.error(e);
+            return;
+        }
         this.log.debug(this.accessory.context.device.name, AQIstats);
         switch ((_b = (_a = this.accessory.context.device.capabilities) === null || _a === void 0 ? void 0 : _a.AirQualityMonitor) !== null && _b !== void 0 ? _b : 0) {
             case 0:
@@ -189,7 +196,9 @@ class MolekulePlatformAccessory {
      */
     handleActiveGet() {
         this.updateStates();
-        if (!+this.accessory.context.device.online) {
+        // Check if the device is online
+        const isDeviceOnline = this.accessory.context.device.online === 'true';
+        if (!isDeviceOnline) {
             this.log.warn(this.accessory.context.device.name, "sent offline status to homekit");
             throw new this.platform.api.hap.HapStatusError(-70402 /* this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE */);
         }

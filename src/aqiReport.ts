@@ -30,7 +30,8 @@ export class aqiReport {
       TVOC: 0,
       CO2: 0,
     };
-    if (response === undefined) throw new Error("Failed to get AQI data");
+    if (response === undefined || response.message == "Sensor data not found") throw new Error("Failed to get AQI data");
+    
     else {
       response.sensorData.forEach((pollutant: aqiType) => {
         for (

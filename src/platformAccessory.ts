@@ -172,9 +172,16 @@ export class MolekulePlatformAccessory {
    * These are sent when the user changes the state of an accessory, for example, turning on a Light bulb.
    */
   async updateAirQuality() {
-    const AQIstats = await this.aqiClass.getAqi(
-      this.accessory.context.device.serialNumber,
-    );
+    let AQIstats;
+    try {
+      AQIstats = await this.aqiClass.getAqi(
+        this.accessory.context.device.serialNumber,
+      );
+    }
+    catch (e){
+      this.log.error(e);
+      return
+    }
     this.log.debug(this.accessory.context.device.name, AQIstats);
     switch (this.accessory.context.device.capabilities?.AirQualityMonitor ?? 0) {
       case 0:
@@ -268,7 +275,9 @@ export class MolekulePlatformAccessory {
    */
   handleActiveGet(): CharacteristicValue {
     this.updateStates();
-    if (!+this.accessory.context.device.online) {
+    // Check if the device is online
+    const isDeviceOnline = this.accessory.context.device.online === 'true';
+    if (!isDeviceOnline) {
       this.log.warn(this.accessory.context.device.name, "sent offline status to homekit")
       throw new this.platform.api.hap.HapStatusError(
         this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE,

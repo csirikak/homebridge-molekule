@@ -53,13 +53,15 @@ class MolekuleHomebridgePlatform {
     async discoverDevices() {
         this.log.debug("Discover Devices Called");
         const response = this.requester.httpCall("GET", "", "", 1);
-        const devicesQuery = await (await response).json();
         // loop over the discovered devices and register each one if it has not already been registered
         if ((await response).status !== 200) {
-            this.log.error("Fatal error, discover devices failed. Try running homebridge in debug mode to see HTTP status code.");
+            this.log.error("Fatal error, discover devices failed. HTTP Status code: " + (await response).status + " Response: " + JSON.stringify((await response).body));
             return; //prevent crashes
         }
+        const devicesQuery = await (await response).json();
+        this.log.debug(JSON.stringify(devicesQuery));
         devicesQuery.content.forEach((device) => {
+            var _a, _b;
             // generate a unique id for the accessory this should be generated from
             // something globally unique, but constant, for example, the device serial
             // number or MAC address
@@ -101,6 +103,12 @@ class MolekuleHomebridgePlatform {
                 // store a copy of the device object in the `accessory.context`
                 // the `context` property can be used to store any data about the accessory you may need
                 device.capabilities = Models[device.model];
+                if (!device.capabilities) {
+                    this.log.info("The device", device.name, "is not a known model. Using default values.");
+                }
+                if ((_b = (_a = device.capabilities) === null || _a === void 0 ? void 0 : _a.AutoFunctionality) !== null && _b !== void 0 ? _b : false) {
+                    device.capabilities.AutoFunctionality = 0;
+                }
                 accessory.context.device = device;
                 // create the accessory handler for the newly create accessory
                 // this is imported from `platformAccessory.ts`

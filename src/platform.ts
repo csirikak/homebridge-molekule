@@ -97,14 +97,15 @@ export class MolekuleHomebridgePlatform implements DynamicPlatformPlugin {
   async discoverDevices() {
     this.log.debug("Discover Devices Called");
     const response = this.requester.httpCall("GET", "", "", 1);
-    const devicesQuery: queryResponse = await (await response).json();
     // loop over the discovered devices and register each one if it has not already been registered
     if ((await response).status !== 200) {
       this.log.error(
-        "Fatal error, discover devices failed. Try running homebridge in debug mode to see HTTP status code.",
+        "Fatal error, discover devices failed. HTTP Status code: " + (await response).status + " Response: " + JSON.stringify((await response).body),
       );
       return; //prevent crashes
     }
+    const devicesQuery: queryResponse = await (await response).json();
+    this.log.debug(JSON.stringify(devicesQuery));
     devicesQuery.content.forEach((device: deviceData) => {
       // generate a unique id for the accessory this should be generated from
       // something globally unique, but constant, for example, the device serial
@@ -165,6 +166,12 @@ export class MolekuleHomebridgePlatform implements DynamicPlatformPlugin {
         // store a copy of the device object in the `accessory.context`
         // the `context` property can be used to store any data about the accessory you may need
         device.capabilities = Models[device.model];
+        if (!device.capabilities) {
+          this.log.info("The device", device.name, "is not a known model. Using default values.")
+        }
+        if (device.capabilities?.AutoFunctionality ?? false) {
+          device.capabilities.AutoFunctionality = 0;
+        }
         accessory.context.device = device;
 
         // create the accessory handler for the newly create accessory

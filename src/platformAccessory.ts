@@ -91,7 +91,7 @@ export class MolekulePlatformAccessory {
       .getCharacteristic(this.platform.Characteristic.CurrentAirPurifierState)
       .onGet(this.getState.bind(this)); // GET - bind to the `getState` method below
     // register handlers for the TargetAirPurifierState Characteristic
-    if (this.accessory.context.device.capabilities.AutoFunctionality) {
+    if (this.accessory.context.device.capabilities?.AutoFunctionality ?? false) {
       this.service
         .getCharacteristic(this.platform.Characteristic.TargetAirPurifierState)
         .onSet(this.handleAutoSet.bind(this))
@@ -114,7 +114,7 @@ export class MolekulePlatformAccessory {
       this.aqiService = this.accessory.getService(this.platform.Service.AirQualitySensor) ||
       this.accessory.addService(this.platform.Service.AirQualitySensor);
     }
-    else {
+    else if (this.accessory.context.device.capabilities?.AirQualityMonitor ?? false) {
       if (this.accessory.getService(this.platform.Service.AirQualitySensor) ?? false) {
         this.accessory.removeService(this.accessory.getService(this.platform.Service.AirQualitySensor)!);
       }
@@ -122,7 +122,9 @@ export class MolekulePlatformAccessory {
         this.accessory.removeService(this.accessory.getService(this.platform.Service.HumiditySensor)!);
       }
     }
-    switch (this.accessory.context.device.capabilities.AirQualityMonitor) {
+    switch (this.accessory.context.device.capabilities?.AirQualityMonitor ?? 0) {
+      case 0:
+        break;
       case 1:
         this.aqiService
           .getCharacteristic(this.platform.Characteristic.AirQuality)
@@ -174,7 +176,9 @@ export class MolekulePlatformAccessory {
       this.accessory.context.device.serialNumber,
     );
     this.log.debug(this.accessory.context.device.name, AQIstats);
-    switch (this.accessory.context.device.capabilities.AirQualityMonitor) {
+    switch (this.accessory.context.device.capabilities?.AirQualityMonitor ?? 0) {
+      case 0:
+        break;
       case 1:
         this.aqiService.updateCharacteristic(
           this.platform.Characteristic.PM2_5Density,
@@ -265,6 +269,7 @@ export class MolekulePlatformAccessory {
   handleActiveGet(): CharacteristicValue {
     this.updateStates();
     if (!+this.accessory.context.device.online) {
+      this.log.warn(this.accessory.context.device.name, "sent offline status to homekit")
       throw new this.platform.api.hap.HapStatusError(
         this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE,
       );
@@ -287,7 +292,7 @@ export class MolekulePlatformAccessory {
       ),
     );
     switch (
-      this.accessory.context.device.capabilities.AutoFunctionality as number
+      this.accessory.context.device.capabilities?.AutoFunctionality ?? 0 as number
     ) {
       case 1:
         if (value === 1)
@@ -446,7 +451,7 @@ export class MolekulePlatformAccessory {
       MolekulePlatformAccessory.query.change = false;
     } else this.platform.log.debug("saved a request");
     if (MolekulePlatformAccessory.query.content === undefined)
-      this.accessory.context.device.offline = true;
+      this.accessory.context.device.online = false;
     for (
       let i = 0;
       i < Object.keys(MolekulePlatformAccessory.query.content).length;
@@ -499,9 +504,6 @@ export class MolekulePlatformAccessory {
             this.accessory.context.device.name +
               " was reported to be offline by the Molekule API.",
           );
-          this.accessory.context.device.online = false;
-        } else {
-          this.accessory.context.device.online = true;
         }
         if (this.accessory.context.device.mode !== "off") {
           this.state.On = 1;
@@ -525,7 +527,7 @@ export class MolekulePlatformAccessory {
       this.platform.Characteristic.Active,
       this.state.On,
     );
-    if (this.accessory.context.device.AutoFunctionality != 0)
+    if ((this.accessory.context.device?.AutoFunctionality ?? 0) != 0)
       this.service.updateCharacteristic(
         this.platform.Characteristic.TargetAirPurifierState,
         this.state.auto,

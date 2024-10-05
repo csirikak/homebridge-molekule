@@ -14,6 +14,11 @@
             "MaxFanSpeed": 5,
             "AutoFunctionality": 0,
             "AirQualityMonitor": 0
+        },
+        "Molekule Air": {
+            "MaxFanSpeed": 3,
+            "AutoFunctionality": 0,
+            "AirQualityMonitor": 0
         }
     }
 }

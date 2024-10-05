@@ -180,7 +180,6 @@ class MolekulePlatformAccessory {
             }
         }
         MolekulePlatformAccessory.query.change = true;
-        this.updateStates();
     }
     /**
      * Handle the "GET" requests from HomeKit

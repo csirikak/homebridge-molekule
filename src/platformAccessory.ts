@@ -258,7 +258,6 @@ export class MolekulePlatformAccessory {
       }
     }
     MolekulePlatformAccessory.query.change = true;
-    this.updateStates();
   }
 
   /**

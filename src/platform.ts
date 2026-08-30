@@ -1,4 +1,4 @@
-import {
+import type {
   API,
   DynamicPlatformPlugin,
   Logger,
@@ -11,35 +11,10 @@ import { PLATFORM_NAME, PLUGIN_NAME } from "./settings";
 import { MolekulePlatformAccessory } from "./platformAccessory";
 import { HttpAJAX } from "./cognito";
 import { models } from "./devices.json";
+import type { deviceData, JsonData, queryResponse } from "./types";
 
-export interface queryResponse {
-  content: deviceData[];
-  requestTime: number;
-  change: boolean;
-}
-interface deviceData {
-  name: string;
-  model: string;
-  serialNumber: string;
-  auto: string;
-  pecoFilter: string;
-  fanspeed: string;
-  mode: string;
-  online: string;
-  aqi: string;
-  silent: string;
-  capabilities: capabilities;
-}
-interface capabilities {
-  MaxFanSpeed: number;
-  AutoFunctionality: number;
-  AirQualityMonitor: number;
-}
-
-interface JsonData {
-  [deviceName: string]: capabilities;
-}
-let intervalID: NodeJS.Timer;
+export type { queryResponse } from "./types";
+let intervalID: NodeJS.Timeout;
 const Models: JsonData = models;
 const refreshInterval = 60; //token refresh interval in minutes
 /**
@@ -96,15 +71,15 @@ export class MolekuleHomebridgePlatform implements DynamicPlatformPlugin {
    */
   async discoverDevices() {
     this.log.debug("Discover Devices Called");
-    const response = this.requester.httpCall("GET", "", "", 1);
+    const response = await this.requester.httpCall("GET", "", "", 1);
     // loop over the discovered devices and register each one if it has not already been registered
-    if ((await response).status !== 200) {
+    if (response.status !== 200) {
       this.log.error(
-        "Fatal error, discover devices failed. HTTP Status code: " + (await response).status + " Response: " + JSON.stringify((await response).body),
+        "Fatal error, discover devices failed. HTTP Status code: " + response.status + " Response: " + JSON.stringify(response.body),
       );
       return; //prevent crashes
     }
-    const devicesQuery: queryResponse = await (await response).json();
+    const devicesQuery = (await response.json()) as queryResponse;
     this.log.debug(JSON.stringify(devicesQuery));
     devicesQuery.content.forEach((device: deviceData) => {
       // generate a unique id for the accessory this should be generated from
@@ -169,9 +144,6 @@ export class MolekuleHomebridgePlatform implements DynamicPlatformPlugin {
         if (!device.capabilities) {
           this.log.info("The device", device.name, "is not a known model. Using default values.")
         }
-        if (device.capabilities?.AutoFunctionality ?? false) {
-          device.capabilities.AutoFunctionality = 0;
-        }
         accessory.context.device = device;
 
         // create the accessory handler for the newly create accessory
@@ -194,8 +166,7 @@ export class MolekuleHomebridgePlatform implements DynamicPlatformPlugin {
         !devicesQuery.content.find(
           (device) =>
             this.api.hap.uuid.generate(device.serialNumber) === accessory.UUID,
-        ) ??
-        true
+        )
       ) {
         this.log.warn("Removing accessory:", accessory.context.device.name);
         this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [

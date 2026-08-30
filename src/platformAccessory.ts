@@ -1,4 +1,4 @@
-import {
+import type {
   Service,
   PlatformAccessory,
   CharacteristicValue,
@@ -99,6 +99,7 @@ export class MolekulePlatformAccessory {
     }
     this.service
       .getCharacteristic(this.platform.Characteristic.RotationSpeed)
+      .setProps({ minStep: 100 / this.maxSpeed })
       .onSet(this.setSpeed.bind(this))
       .onGet(this.getSpeed.bind(this));
 
@@ -221,12 +222,10 @@ export class MolekulePlatformAccessory {
   }
   async handleActiveSet(value: CharacteristicValue) {
     // implement your own code to turn your device on/off
-    let data = '"on"}';
-    if (!value) data = '"off"}';
     const response = await this.requester.httpCall(
       "POST",
       this.accessory.context.device.serialNumber + "/actions/set-power-status",
-      '{"status":' + data,
+      JSON.stringify({ status: value ? "on" : "off" }),
       1,
     );
     if (response.status === 204) {
@@ -436,7 +435,7 @@ export class MolekulePlatformAccessory {
   }
 
   getFilterChange(): CharacteristicValue {
-    if (this.state.Filter > this.config.threshold ?? 10) return 0;
+    if (this.state.Filter > (this.config.threshold ?? 10)) return 0;
     else return 1;
   }
 
@@ -454,12 +453,18 @@ export class MolekulePlatformAccessory {
       Date.now() - MolekulePlatformAccessory.query.requestTime > 5000
     ) {
       const re = await this.requester.httpCall("GET", "", "", 1);
-      MolekulePlatformAccessory.query = await re.json();
+      MolekulePlatformAccessory.query = (await re.json()) as queryResponse;
       MolekulePlatformAccessory.query.requestTime = Date.now();
       MolekulePlatformAccessory.query.change = false;
     } else this.platform.log.debug("saved a request");
-    if (MolekulePlatformAccessory.query.content === undefined)
-      this.accessory.context.device.online = false;
+    if (MolekulePlatformAccessory.query.content === undefined) {
+      this.accessory.context.device.online = "false";
+      this.log.warn(
+        this.accessory.context.device.name,
+        "received no device content from the Molekule API; skipping state update.",
+      );
+      return;
+    }
     for (
       let i = 0;
       i < Object.keys(MolekulePlatformAccessory.query.content).length;
@@ -535,7 +540,7 @@ export class MolekulePlatformAccessory {
       this.platform.Characteristic.Active,
       this.state.On,
     );
-    if ((this.accessory.context.device?.AutoFunctionality ?? 0) != 0)
+    if ((this.accessory.context.device?.capabilities?.AutoFunctionality ?? 0) != 0)
       this.service.updateCharacteristic(
         this.platform.Characteristic.TargetAirPurifierState,
         this.state.auto,

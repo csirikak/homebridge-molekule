@@ -8,8 +8,12 @@ const aqiReport_1 = require("./aqiReport");
  * Each accessory may expose multiple services of different service types.
  */
 class MolekulePlatformAccessory {
+    static { this.query = {
+        content: [],
+        requestTime: 0,
+        change: false,
+    }; }
     constructor(platform, accessory, config, log, requester) {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q;
         this.platform = platform;
         this.accessory = accessory;
         this.config = config;
@@ -19,9 +23,9 @@ class MolekulePlatformAccessory {
          * These are just used to create a working example
          * You should implement your own code to track the state of your accessory
          */
-        this.maxSpeed = (_b = (_a = this.accessory.context.device.capabilities) === null || _a === void 0 ? void 0 : _a.MaxFanSpeed) !== null && _b !== void 0 ? _b : 6; //defaults to max speed of 6 if device not in JSON
+        this.maxSpeed = this.accessory.context.device.capabilities?.MaxFanSpeed ?? 6; //defaults to max speed of 6 if device not in JSON
         this.state = {
-            state: 0,
+            state: 0, //https://developers.homebridge.io/#/characteristic/CurrentAirPurifierState
             Speed: 0,
             Filter: 100,
             On: 0,
@@ -39,7 +43,7 @@ class MolekulePlatformAccessory {
         // clear the AirPurifier service if it exists, and create a new AirPurifier service
         // you can create multiple services for each accessory
         // clearing needed to simplify handling of service split function.
-        if ((_c = this.accessory.getService(this.platform.Service.AirPurifier)) !== null && _c !== void 0 ? _c : false) {
+        if (this.accessory.getService(this.platform.Service.AirPurifier) ?? false) {
             this.accessory.removeService(this.accessory.getService(this.platform.Service.AirPurifier));
         }
         this.service = this.accessory.addService(this.platform.Service.AirPurifier);
@@ -58,7 +62,7 @@ class MolekulePlatformAccessory {
             .getCharacteristic(this.platform.Characteristic.CurrentAirPurifierState)
             .onGet(this.getState.bind(this)); // GET - bind to the `getState` method below
         // register handlers for the TargetAirPurifierState Characteristic
-        if ((_e = (_d = this.accessory.context.device.capabilities) === null || _d === void 0 ? void 0 : _d.AutoFunctionality) !== null && _e !== void 0 ? _e : false) {
+        if (this.accessory.context.device.capabilities?.AutoFunctionality ?? false) {
             this.service
                 .getCharacteristic(this.platform.Characteristic.TargetAirPurifierState)
                 .onSet(this.handleAutoSet.bind(this))
@@ -66,6 +70,7 @@ class MolekulePlatformAccessory {
         }
         this.service
             .getCharacteristic(this.platform.Characteristic.RotationSpeed)
+            .setProps({ minStep: 100 / this.maxSpeed })
             .onSet(this.setSpeed.bind(this))
             .onGet(this.getSpeed.bind(this));
         this.service
@@ -76,19 +81,19 @@ class MolekulePlatformAccessory {
             .onGet(this.getFilterStatus.bind(this));
         this.aqiService = this.service;
         this.humidityService = this.service;
-        if (((_f = this.config.AQIseparate) !== null && _f !== void 0 ? _f : false) && ((_h = (_g = this.accessory.context.device.capabilities) === null || _g === void 0 ? void 0 : _g.AirQualityMonitor) !== null && _h !== void 0 ? _h : false)) {
+        if ((this.config.AQIseparate ?? false) && (this.accessory.context.device.capabilities?.AirQualityMonitor ?? false)) {
             this.aqiService = this.accessory.getService(this.platform.Service.AirQualitySensor) ||
                 this.accessory.addService(this.platform.Service.AirQualitySensor);
         }
-        else if ((_k = (_j = this.accessory.context.device.capabilities) === null || _j === void 0 ? void 0 : _j.AirQualityMonitor) !== null && _k !== void 0 ? _k : false) {
-            if ((_l = this.accessory.getService(this.platform.Service.AirQualitySensor)) !== null && _l !== void 0 ? _l : false) {
+        else if (this.accessory.context.device.capabilities?.AirQualityMonitor ?? false) {
+            if (this.accessory.getService(this.platform.Service.AirQualitySensor) ?? false) {
                 this.accessory.removeService(this.accessory.getService(this.platform.Service.AirQualitySensor));
             }
-            if ((_m = this.accessory.getService(this.platform.Service.HumiditySensor)) !== null && _m !== void 0 ? _m : false) {
+            if (this.accessory.getService(this.platform.Service.HumiditySensor) ?? false) {
                 this.accessory.removeService(this.accessory.getService(this.platform.Service.HumiditySensor));
             }
         }
-        switch ((_p = (_o = this.accessory.context.device.capabilities) === null || _o === void 0 ? void 0 : _o.AirQualityMonitor) !== null && _p !== void 0 ? _p : 0) {
+        switch (this.accessory.context.device.capabilities?.AirQualityMonitor ?? 0) {
             case 0:
                 break;
             case 1:
@@ -99,7 +104,7 @@ class MolekulePlatformAccessory {
                 this.aqiService.getCharacteristic(this.platform.Characteristic.PM10Density);
                 this.aqiService.getCharacteristic(this.platform.Characteristic.CarbonDioxideLevel);
                 this.aqiService.getCharacteristic(this.platform.Characteristic.VOCDensity);
-                if ((_q = this.config.AQIseparate) !== null && _q !== void 0 ? _q : false) {
+                if (this.config.AQIseparate ?? false) {
                     this.humidityService = this.accessory.getService(this.platform.Service.HumiditySensor) ||
                         this.accessory.addService(this.platform.Service.HumiditySensor);
                 }
@@ -127,7 +132,6 @@ class MolekulePlatformAccessory {
      * These are sent when the user changes the state of an accessory, for example, turning on a Light bulb.
      */
     async updateAirQuality() {
-        var _a, _b, _c, _d, _e, _f, _g, _h;
         let AQIstats;
         try {
             AQIstats = await this.aqiClass.getAqi(this.accessory.context.device.serialNumber);
@@ -137,18 +141,18 @@ class MolekulePlatformAccessory {
             return;
         }
         this.log.debug(this.accessory.context.device.name, AQIstats);
-        switch ((_b = (_a = this.accessory.context.device.capabilities) === null || _a === void 0 ? void 0 : _a.AirQualityMonitor) !== null && _b !== void 0 ? _b : 0) {
+        switch (this.accessory.context.device.capabilities?.AirQualityMonitor ?? 0) {
             case 0:
                 break;
             case 1:
-                this.aqiService.updateCharacteristic(this.platform.Characteristic.PM2_5Density, (_c = AQIstats["PM2_5"]) !== null && _c !== void 0 ? _c : 0);
-                this.aqiService.updateCharacteristic(this.platform.Characteristic.PM10Density, (_d = AQIstats["PM10"]) !== null && _d !== void 0 ? _d : 0);
-                this.humidityService.updateCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity, (_e = AQIstats["RH"]) !== null && _e !== void 0 ? _e : 0);
-                this.aqiService.updateCharacteristic(this.platform.Characteristic.CarbonDioxideLevel, (_f = AQIstats["CO2"]) !== null && _f !== void 0 ? _f : 0);
-                this.aqiService.updateCharacteristic(this.platform.Characteristic.VOCDensity, (_g = AQIstats["TVOC"]) !== null && _g !== void 0 ? _g : 0);
+                this.aqiService.updateCharacteristic(this.platform.Characteristic.PM2_5Density, AQIstats["PM2_5"] ?? 0);
+                this.aqiService.updateCharacteristic(this.platform.Characteristic.PM10Density, AQIstats["PM10"] ?? 0);
+                this.humidityService.updateCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity, AQIstats["RH"] ?? 0);
+                this.aqiService.updateCharacteristic(this.platform.Characteristic.CarbonDioxideLevel, AQIstats["CO2"] ?? 0);
+                this.aqiService.updateCharacteristic(this.platform.Characteristic.VOCDensity, AQIstats["TVOC"] ?? 0);
                 break;
             case 2:
-                this.aqiService.updateCharacteristic(this.platform.Characteristic.PM2_5Density, (_h = AQIstats["PM2_5"]) !== null && _h !== void 0 ? _h : 0);
+                this.aqiService.updateCharacteristic(this.platform.Characteristic.PM2_5Density, AQIstats["PM2_5"] ?? 0);
         }
     }
     getAirQuality() {
@@ -157,10 +161,7 @@ class MolekulePlatformAccessory {
     }
     async handleActiveSet(value) {
         // implement your own code to turn your device on/off
-        let data = '"on"}';
-        if (!value)
-            data = '"off"}';
-        const response = await this.requester.httpCall("POST", this.accessory.context.device.serialNumber + "/actions/set-power-status", '{"status":' + data, 1);
+        const response = await this.requester.httpCall("POST", this.accessory.context.device.serialNumber + "/actions/set-power-status", JSON.stringify({ status: value ? "on" : "off" }), 1);
         if (response.status === 204) {
             this.platform.log.info("Attempted to set: " +
                 value +
@@ -209,10 +210,9 @@ class MolekulePlatformAccessory {
         return this.state.state;
     }
     async handleAutoSet(value) {
-        var _a, _b, _c;
         let responseCode;
         const clamp = Math.round(Math.min(Math.max(this.state.Speed / (100 / this.maxSpeed), 1), this.maxSpeed));
-        switch ((_b = (_a = this.accessory.context.device.capabilities) === null || _a === void 0 ? void 0 : _a.AutoFunctionality) !== null && _b !== void 0 ? _b : 0) {
+        switch (this.accessory.context.device.capabilities?.AutoFunctionality ?? 0) {
             case 1:
                 if (value === 1)
                     responseCode = (await this.requester.httpCall("POST", this.accessory.context.device.serialNumber +
@@ -226,7 +226,7 @@ class MolekulePlatformAccessory {
             case 2:
                 if (value === 1)
                     responseCode = (await this.requester.httpCall("POST", this.accessory.context.device.serialNumber +
-                        "/actions/enable-smart-mode", '{"silent": "' + +((_c = this.config.silentAuto) !== null && _c !== void 0 ? _c : 0) + '"}', 1)).status;
+                        "/actions/enable-smart-mode", '{"silent": "' + +(this.config.silentAuto ?? 0) + '"}', 1)).status;
                 else {
                     responseCode = (await this.requester.httpCall("POST", this.accessory.context.device.serialNumber +
                         "/actions/set-fan-speed", '{"fanSpeed": ' + clamp + "}", 1)).status;
@@ -271,8 +271,7 @@ class MolekulePlatformAccessory {
         return this.state.Speed;
     }
     getFilterChange() {
-        var _a;
-        if ((_a = this.state.Filter > this.config.threshold) !== null && _a !== void 0 ? _a : 10)
+        if (this.state.Filter > (this.config.threshold ?? 10))
             return 0;
         else
             return 1;
@@ -282,18 +281,20 @@ class MolekulePlatformAccessory {
         return this.state.Filter;
     }
     async updateStates() {
-        var _a, _b;
         if (MolekulePlatformAccessory.query.change ||
             Date.now() - MolekulePlatformAccessory.query.requestTime > 5000) {
             const re = await this.requester.httpCall("GET", "", "", 1);
-            MolekulePlatformAccessory.query = await re.json();
+            MolekulePlatformAccessory.query = (await re.json());
             MolekulePlatformAccessory.query.requestTime = Date.now();
             MolekulePlatformAccessory.query.change = false;
         }
         else
             this.platform.log.debug("saved a request");
-        if (MolekulePlatformAccessory.query.content === undefined)
-            this.accessory.context.device.online = false;
+        if (MolekulePlatformAccessory.query.content === undefined) {
+            this.accessory.context.device.online = "false";
+            this.log.warn(this.accessory.context.device.name, "received no device content from the Molekule API; skipping state update.");
+            return;
+        }
         for (let i = 0; i < Object.keys(MolekulePlatformAccessory.query.content).length; i++) {
             if (MolekulePlatformAccessory.query.content[i].serialNumber ===
                 this.accessory.context.device.serialNumber) {
@@ -342,14 +343,9 @@ class MolekulePlatformAccessory {
         this.service.updateCharacteristic(this.platform.Characteristic.RotationSpeed, this.state.Speed);
         this.service.updateCharacteristic(this.platform.Characteristic.CurrentAirPurifierState, this.state.state);
         this.service.updateCharacteristic(this.platform.Characteristic.Active, this.state.On);
-        if (((_b = (_a = this.accessory.context.device) === null || _a === void 0 ? void 0 : _a.AutoFunctionality) !== null && _b !== void 0 ? _b : 0) != 0)
+        if ((this.accessory.context.device?.capabilities?.AutoFunctionality ?? 0) != 0)
             this.service.updateCharacteristic(this.platform.Characteristic.TargetAirPurifierState, this.state.auto);
     }
 }
 exports.MolekulePlatformAccessory = MolekulePlatformAccessory;
-MolekulePlatformAccessory.query = {
-    content: [],
-    requestTime: 0,
-    change: false,
-};
 //# sourceMappingURL=platformAccessory.js.map

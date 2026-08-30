@@ -52,16 +52,15 @@ class MolekuleHomebridgePlatform {
      */
     async discoverDevices() {
         this.log.debug("Discover Devices Called");
-        const response = this.requester.httpCall("GET", "", "", 1);
+        const response = await this.requester.httpCall("GET", "", "", 1);
         // loop over the discovered devices and register each one if it has not already been registered
-        if ((await response).status !== 200) {
-            this.log.error("Fatal error, discover devices failed. HTTP Status code: " + (await response).status + " Response: " + JSON.stringify((await response).body));
+        if (response.status !== 200) {
+            this.log.error("Fatal error, discover devices failed. HTTP Status code: " + response.status + " Response: " + JSON.stringify(response.body));
             return; //prevent crashes
         }
-        const devicesQuery = await (await response).json();
+        const devicesQuery = (await response.json());
         this.log.debug(JSON.stringify(devicesQuery));
         devicesQuery.content.forEach((device) => {
-            var _a, _b;
             // generate a unique id for the accessory this should be generated from
             // something globally unique, but constant, for example, the device serial
             // number or MAC address
@@ -106,9 +105,6 @@ class MolekuleHomebridgePlatform {
                 if (!device.capabilities) {
                     this.log.info("The device", device.name, "is not a known model. Using default values.");
                 }
-                if ((_b = (_a = device.capabilities) === null || _a === void 0 ? void 0 : _a.AutoFunctionality) !== null && _b !== void 0 ? _b : false) {
-                    device.capabilities.AutoFunctionality = 0;
-                }
                 accessory.context.device = device;
                 // create the accessory handler for the newly create accessory
                 // this is imported from `platformAccessory.ts`
@@ -120,8 +116,7 @@ class MolekuleHomebridgePlatform {
             }
         });
         this.accessories.forEach((accessory) => {
-            var _a;
-            if ((_a = !devicesQuery.content.find((device) => this.api.hap.uuid.generate(device.serialNumber) === accessory.UUID)) !== null && _a !== void 0 ? _a : true) {
+            if (!devicesQuery.content.find((device) => this.api.hap.uuid.generate(device.serialNumber) === accessory.UUID)) {
                 this.log.warn("Removing accessory:", accessory.context.device.name);
                 this.api.unregisterPlatformAccessories(settings_1.PLUGIN_NAME, settings_1.PLATFORM_NAME, [
                     accessory,

@@ -1,20 +1,21 @@
-import { Logger, PlatformConfig } from "homebridge";
+import type { Logger, PlatformConfig } from "homebridge";
 import {
   CognitoUserPool,
   AuthenticationDetails,
   CognitoUser,
   CognitoRefreshToken,
 } from "amazon-cognito-identity-js";
-import("node-fetch");
-let token = "";
-let refreshToken: CognitoRefreshToken;
-let authError: boolean;
+
 // Molekule API settings
 const ClientId = "1ec4fa3oriciupg94ugoi84kkk";
 const PoolId = "us-west-2_KqrEZKC6r";
 const url = "https://api.molekule.com/users/me/devices/";
+
 export class HttpAJAX {
   private readonly log: Logger;
+  private token = "";
+  private refreshToken?: CognitoRefreshToken;
+  private authError = false;
   email: string;
   pass: string;
   authenticationData;
@@ -45,9 +46,10 @@ export class HttpAJAX {
     );
     this.cognitoUser = new CognitoUser(this.userData);
   }
+
   refreshIdToken() {
     return new Promise((resolve, reject) =>
-      this.cognitoUser.refreshSession(refreshToken, (err, session) => {
+      this.cognitoUser.refreshSession(this.refreshToken!, (err, session) => {
         if (err) {
           this.log.info(
             "ID token fetch using refresh token failed. Fallback to username/password",
@@ -56,24 +58,24 @@ export class HttpAJAX {
           reject(err);
         } else {
           this.log.info("✓ Token refresh successful");
-          authError = false;
-          token = session.getIdToken().getJwtToken();
+          this.authError = false;
+          this.token = session.getIdToken().getJwtToken();
           resolve(session);
         }
       }),
     );
   }
+
   initiateAuth() {
     this.log.debug("email: " + this.email);
-    this.log.debug("password: " + this.pass);
     return new Promise((resolve, reject) =>
       this.cognitoUser.authenticateUser(this.authenticationDetails, {
         onSuccess: (result) => {
-          refreshToken = result.getRefreshToken();
+          this.refreshToken = result.getRefreshToken();
           this.log.info("✓ Valid Login Credentials");
-          authError = false;
-          token = result.getIdToken().getJwtToken();
-          resolve(token);
+          this.authError = false;
+          this.token = result.getIdToken().getJwtToken();
+          resolve(this.token);
         },
         onFailure: (err) => {
           this.log.error(
@@ -84,68 +86,54 @@ export class HttpAJAX {
       }),
     );
   }
+
   async httpCall(
     method: string,
     extraUrl: string,
     send: string,
     retry: number,
   ): Promise<Response> {
-    let response: Response;
-    if (authError)
+    if (this.authError)
       await this.refreshIdToken().catch((e) => {
-        this.initiateAuth().catch((e) => {
-          this.log.error(e);
-          return;
+        this.initiateAuth().catch((err) => {
+          this.log.error(err);
         });
         this.log.debug(e);
       });
-    if (token === "" || authError)
+    if (this.token === "" || this.authError)
       await this.initiateAuth().catch((err) => {
         this.log.error(err);
-        return;
       });
-    if (method === "GET") {
-      const contents = {
-        method,
-        headers: {
-          authorization: token,
-          "x-api-version": "1.0",
-          "content-type": "application/json",
-        },
-      };
-      try { response = await fetch(url + extraUrl, contents) }
-      catch(e) {
-        this.log.error(e);
-        return new Response(null, {status: 404});
-      };
-      this.log.debug("HTTP GET STATUS: " + response.status);
-      //this.log.debug('HTTP GET CONTENTS: ' + JSON.stringify(response))
-      if (response.status === 401 && retry > 0) {
-        authError = true;
-        return await this.httpCall(method, extraUrl, send, retry - 1);
-      } else return response;
-    } else {
-      const contents = {
-        method,
-        body: send,
-        headers: {
-          authorization: token,
-          "x-api-version": "1.0",
-          "content-type": "application/json",
-        },
-      };
-      try { response = await fetch(url + extraUrl, contents) }
-      catch(e) {
-        this.log.error(e);
-        return new Response(null, {status: 404});
-      };
-      this.log.debug(
-        "HTTP POST STATUS: " + response.status + " With contents: " + send,
-      );
-      if (response.status === 401 && retry > 0) {
-        authError = true;
-        return await this.httpCall(method, extraUrl, send, retry - 1);
-      }
+
+    const contents: RequestInit = {
+      method,
+      headers: {
+        authorization: this.token,
+        "x-api-version": "1.0",
+        "content-type": "application/json",
+      },
+    };
+    if (method !== "GET") contents.body = send;
+
+    let response: Response;
+    try {
+      response = await fetch(url + extraUrl, contents);
+    } catch (e) {
+      this.log.error(e);
+      return new Response(null, { status: 404 });
+    }
+
+    this.log.debug(
+      "HTTP " +
+        method +
+        " STATUS: " +
+        response.status +
+        (method !== "GET" ? " With contents: " + send : ""),
+    );
+
+    if (response.status === 401 && retry > 0) {
+      this.authError = true;
+      return await this.httpCall(method, extraUrl, send, retry - 1);
     }
     return response;
   }
